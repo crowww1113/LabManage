@@ -1,7 +1,53 @@
-<!--index.wxml-->
-<navigation-bar title="Weixin" back="{{false}}" color="black" background="#FFF"></navigation-bar>
-<scroll-view class="scrollarea" scroll-y type="list">
-  <view class="container">
-    Weixin
+<!-- 顶部欢迎区 -->
+<view class="header">
+  <view class="header-content">
+    <text class="greeting">你好，{{realName || username}} {{roleName}}</text>
+    <text class="welcome">欢迎使用实验室管理系统</text>
   </view>
-</scroll-view>
+</view>
+
+<!-- 核心金刚区 -->
+<view class="card-item grid-card">
+  <view class="grid-container">
+    <view class="grid-item" bindtap="onTapGrid" data-type="lab">
+      <view class="grid-icon">🔬</view>
+      <text class="grid-text">实验室预约</text>
+    </view>
+    <view class="grid-item" bindtap="onTapGrid" data-type="equipment">
+      <view class="grid-icon">🔧</view>
+      <text class="grid-text">设备借用</text>
+    </view>
+    <view class="grid-item" bindtap="onTapGrid" data-type="course">
+      <view class="grid-icon">📚</view>
+      <text class="grid-text">我的课程</text>
+    </view>
+    <view class="grid-item" bindtap="onTapGrid" data-type="message">
+      <view class="grid-icon">📢</view>
+      <text class="grid-text">消息通知</text>
+    </view>
+  </view>
+</view>
+
+<!-- 近期公告区 -->
+<view class="card-item notice-card">
+  <view class="notice-header">
+    <text class="notice-title">近期系统公告</text>
+  </view>
+  <view class="notice-list">
+    <view class="notice-item">
+      <view class="notice-dot"></view>
+      <text class="notice-content">关于实验室安全检查的通知</text>
+      <text class="notice-time">06-10</text>
+    </view>
+    <view class="notice-item">
+      <view class="notice-dot"></view>
+      <text class="notice-content">2026年暑假实验室开放时间安排</text>
+      <text class="notice-time">06-08</text>
+    </view>
+    <view class="notice-item">
+      <view class="notice-dot"></view>
+      <text class="notice-content">新增实验室设备预约功能上线</text>
+      <text class="notice-time">06-05</text>
+    </view>
+  </view>
+</view>
