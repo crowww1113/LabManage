@@ -22,6 +22,44 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* 学期选择 */
+.term-card {
+  margin: 0 24rpx 24rpx;
+  padding: 24rpx 32rpx;
+}
+
+.term-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.term-label {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.term-picker {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background-color: #f0f7ff;
+  padding: 12rpx 24rpx;
+  border-radius: 32rpx;
+  border: 2rpx solid #007aff;
+}
+
+.term-text {
+  font-size: 28rpx;
+  color: #007aff;
+  font-weight: 500;
+}
+
+.term-arrow {
+  font-size: 20rpx;
+  color: #007aff;
+}
+
 /* 核心金刚区 */
 .grid-card {
   margin: -40rpx 24rpx 24rpx;

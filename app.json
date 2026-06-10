@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/login/login",
     "pages/lab/list",
+    "pages/lab/detail",
     "pages/course/list",
     "pages/message/list",
     "pages/equipment/list",

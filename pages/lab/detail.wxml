@@ -1,0 +1,94 @@
+<!-- pages/lab/detail.wxml -->
+<view class="container">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{labInfo}}" class="detail-content">
+    <!-- 实验室信息卡片 -->
+    <view class="info-card">
+      <view class="card-header">
+        <view class="lab-title-wrap">
+          <text class="lab-title">{{labInfo.code}}</text>
+          <text class="lab-type-tag">{{labInfo.roomType}}</text>
+        </view>
+        <view class="book-btn" bindtap="onBookingTap">预约</view>
+      </view>
+
+      <view class="info-grid">
+        <view class="info-cell">
+          <text class="info-value">{{labInfo.seats}}</text>
+          <text class="info-label">容纳人数</text>
+        </view>
+        <view class="info-cell">
+          <text class="info-value">{{labInfo.floor || '-'}}</text>
+          <text class="info-label">楼层</text>
+        </view>
+        <view class="info-cell">
+          <text class="info-value">{{labInfo.area || '-'}}</text>
+          <text class="info-label">面积</text>
+        </view>
+      </view>
+
+      <view wx:if="{{labInfo.intro}}" class="intro-section">
+        <text class="intro-label">简介</text>
+        <text class="intro-text">{{labInfo.intro}}</text>
+      </view>
+    </view>
+
+    <!-- 周次选择 -->
+    <view class="week-selector">
+      <text class="section-title">课表查询</text>
+      <view class="selector-row">
+        <!-- 学期选择 -->
+        <picker wx:if="{{terms.length > 0}}" mode="selector" range="{{terms}}" range-key="termName" value="{{termIndex}}" bindchange="onTermChange">
+          <view class="picker-content">
+            <text class="picker-text">{{terms[termIndex].termName}}</text>
+            <text class="picker-arrow">▼</text>
+          </view>
+        </picker>
+        <!-- 周次选择 -->
+        <picker mode="selector" range="{{weeks}}" value="{{currentWeek - 1}}" bindchange="onWeekChange">
+          <view class="picker-content">
+            <text class="picker-text">第 {{currentWeek}} 周</text>
+            <text class="picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 星期选择 -->
+    <view class="day-tabs">
+      <view
+        wx:for="{{days}}"
+        wx:key="index"
+        class="day-tab {{currentDay === index + 1 ? 'active' : ''}}"
+        data-day="{{index + 1}}"
+        bindtap="onDayTap"
+      >
+        {{item}}
+      </view>
+    </view>
+
+    <!-- 预约情况 -->
+    <view class="availability-section">
+      <view wx:if="{{availability.length > 0}}" class="conflict-list">
+        <view wx:for="{{availability}}" wx:key="timeSlotName" class="conflict-item">
+          <view class="conflict-time">{{item.timeSlotName}}</view>
+          <view class="conflict-info">
+            <text class="conflict-course">{{item.courseName}}</text>
+            <text class="conflict-teacher">{{item.teacherName}}</text>
+            <text class="conflict-clazz">{{item.clazzName}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="empty-slot">
+        <image class="empty-icon" src="/images/empty.png" mode="aspectFit"></image>
+        <text class="empty-text">当前时段暂无预约</text>
+      </view>
+    </view>
+  </view>
+</view>

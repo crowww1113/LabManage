@@ -4,7 +4,7 @@
  */
 
 // 基础配置
-const BASE_URL = 'http://localhost:8080'; // 开发环境，生产环境需修改
+const BASE_URL = 'http://127.0.0.1:8083'; // 开发环境，生产环境需修改
 
 /**
  * 封装 wx.request 为 Promise
