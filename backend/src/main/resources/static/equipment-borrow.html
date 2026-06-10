@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Last-Modified" content="2026-05-27T12:00:00Z" />
+  <title>设备借还管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Microsoft YaHei", sans-serif; background: #f5f5f5; color: #333; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .header h2 { font-size: 20px; color: #1a1a1a; }
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; }
+    .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+    .tab:hover { color: #2563eb; }
+    .tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .toolbar select, .toolbar input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-warning { background: #f59e0b; color: #fff; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-light { background: #f3f4f6; color: #333; border: 1px solid #ddd; }
+    .btn-light:hover { background: #e5e7eb; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+    th { background: #f8f9fa; font-weight: 600; color: #555; }
+    tr:hover { background: #f8f9fa; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-approved { background: #dbeafe; color: #1e40af; }
+    .status-borrowed { background: #d1fae5; color: #065f46; }
+    .status-returned { background: #e5e7eb; color: #374151; }
+    .status-rejected { background: #fee2e2; color: #991b1b; }
+    .status-overdue { background: #fecaca; color: #dc2626; }
+    .alert-box { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+    .alert-danger { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+    .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #fff; border-radius: 12px; width: 500px; max-width: 90%; max-height: 80vh; overflow-y: auto; padding: 24px; }
+    .modal h3 { margin-bottom: 16px; font-size: 18px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #555; font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: #fff; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .stat-card .num { font-size: 28px; font-weight: 700; }
+    .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
+    .stat-card.danger .num { color: #dc2626; }
+    .stat-card.warning .num { color: #f59e0b; }
+    .stat-card.success .num { color: #16a34a; }
+    .stat-card.info .num { color: #2563eb; }
+    .empty-row { text-align: center; color: #999; padding: 40px !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>设备借还管理</h2>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-grid" id="statsArea">
+      <div class="stat-card danger"><div class="num" id="statOverdue">0</div><div class="label">逾期设备</div></div>
+      <div class="stat-card warning"><div class="num" id="statDueSoon">0</div><div class="label">即将到期</div></div>
+      <div class="stat-card info"><div class="num" id="statBorrowed">0</div><div class="label">已借出</div></div>
+      <div class="stat-card success"><div class="num" id="statPending">0</div><div class="label">待审批</div></div>
+    </div>
+
+    <!-- 告警区域 -->
+    <div id="overdueAlertArea"></div>
+    <div id="dueSoonArea"></div>
+
+    <!-- 标签页 -->
+    <div style="position:fixed;top:10px;right:10px;background:#ff4444;color:#fff;padding:5px 10px;border-radius:4px;font-size:12px;z-index:9999;">v2026052738</div>
+    <div class="tabs">
+      <button class="tab active" data-tab="all">全部记录</button>
+      <button class="tab" data-tab="pending">待审批</button>
+      <button class="tab" data-tab="pending-return">待验收</button>
+      <button class="tab" data-tab="borrowed">已借出</button>
+      <button class="tab" data-tab="returned">已归还</button>
+      <button class="tab" data-tab="overdue">逾期管理</button>
+    </div>
+
+    <!-- 全部记录 -->
+    <div class="tab-content active" id="tab-all">
+      <div class="toolbar">
+        <select id="filterStatus">
+          <option value="">全部状态</option>
+          <option value="待导师审批">待导师审批</option>
+          <option value="待管理员审批">待管理员审批</option>
+          <option value="已批准">已批准</option>
+          <option value="已借出">已借出</option>
+          <option value="待验收">待验收</option>
+          <option value="已归还">已归还</option>
+          <option value="已拒绝">已拒绝</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadRecords()">查询</button>
+        <button class="btn btn-success" onclick="showBorrowModal()">+ 申请借出</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>记录编号</th><th>资产编号</th><th>设备名称</th><th>借用人</th><th>用途</th><th>应还日期</th><th>实还日期</th><th>状态</th><th>操作</th></tr>
+        </thead>
+        <tbody id="recordsTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 待审批 -->
+    <div class="tab-content" id="tab-pending">
+      <table>
+        <thead>
+          <tr><th>记录编号</th><th>设备名称</th><th>借用人</th><th>用途</th><th>应还日期</th><th>审批阶段</th><th>备注</th><th>操作</th></tr>
+        </thead>
+        <tbody id="pendingTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 待验收 -->
+    <div class="tab-content" id="tab-pending-return">
+      <table>
+        <thead>
+          <tr><th>记录编号</th><th>设备名称</th><th>借用人</th><th>预计归还时间</th><th>预计归还地点</th><th>申请时间</th><th>操作</th></tr>
+        </thead>
+        <tbody id="pendingReturnTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 已借出 -->
+    <div class="tab-content" id="tab-borrowed">
+      <table>
+        <thead>
+          <tr><th>记录编号</th><th>设备名称</th><th>借用人</th><th>用途</th><th>应还日期</th><th>逾期天数</th><th>操作</th></tr>
+        </thead>
+        <tbody id="borrowedTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 已归还 -->
+    <div class="tab-content" id="tab-returned">
+      <table>
+        <thead>
+          <tr><th>记录编号</th><th>设备名称</th><th>借用人</th><th>用途</th><th>应还日期</th><th>实还日期</th><th>验收结果</th><th>验收人</th></tr>
+        </thead>
+        <tbody id="returnedTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 逾期管理 -->
+    <div class="tab-content" id="tab-overdue">
+      <div id="overdueReminderArea" style="margin-bottom:16px;"></div>
+      <table>
+        <thead>
+          <tr><th>记录编号</th><th>设备名称</th><th>借用人</th><th>联系电话</th><th>应还日期</th><th>逾期天数</th><th>提醒</th><th>操作</th></tr>
+        </thead>
+        <tbody id="overdueTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 借出申请弹窗 -->
+  <div class="modal-overlay" id="borrowModal">
+    <div class="modal" style="max-width:800px;">
+      <h3>申请借出设备</h3>
+      
+      <!-- 设备筛选区域 -->
+      <div id="filterSection" style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px;">
+        <h4 style="margin:0 0 12px;font-size:14px;color:#2563eb;"> 设备筛选</h4>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div>
+            <label style="font-size:12px;color:#666;">设备名称</label>
+            <select id="filterEquipmentName" onchange="loadFilteredEquipment()">
+              <option value="">全部设备</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#666;">设备类别</label>
+            <select id="filterCategory" onchange="loadFilteredEquipment()">
+              <option value="">全部类别</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#666;">设备状态</label>
+            <select id="filterBorrowStatus" onchange="loadFilteredEquipment()">
+              <option value="在库-可用" selected>在库 - 可用</option>
+              <option value="在库-已预约">在库 - 已预约</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 借用表单 -->
+      <div class="form-group">
+        <label>选择设备 *</label>
+        <select id="borrowEquipment" onchange="onEquipmentSelect()" style="max-height:200px;overflow-y:auto;">
+          <option value="">请选择设备</option>
+        </select>
+        <div id="selectedEquipmentInfo" style="margin-top:8px;padding:8px;background:#e0f2fe;border-radius:6px;font-size:13px;display:none;"></div>
+      </div>
+      
+      <!-- 设备清单 -->
+      <div class="form-group" style="margin-top:12px;">
+        <label>设备清单</label>
+        <textarea id="equipmentListText" rows="3" placeholder="请输入需要借用的设备清单，如：鼠标、说明书、U盘等"></textarea>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>借用人 *</label>
+          <select id="borrowUser" onchange="onBorrowerChange()">
+            <option value="">请选择借用人</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>导师审批</label>
+          <select id="borrowMentor" disabled>
+            <option value="">不需要导师审批</option>
+          </select>
+          <div id="mentorTip" style="font-size:12px;color:#f59e0b;margin-top:4px;display:none;">⚠️ 学生或重要设备需要导师审批</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>借用用途 *</label>
+        <textarea id="borrowPurpose" rows="2" placeholder="请输入借用用途，如：Java 程序设计课程实验教学"></textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>借用日期 *</label>
+          <input type="date" id="borrowDate" />
+        </div>
+        <div class="form-group">
+          <label>预计归还日期 *</label>
+          <input type="date" id="borrowReturnDate" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>联系电话</label>
+          <input type="text" id="borrowPhone" placeholder="手机号码" />
+        </div>
+        <div class="form-group">
+          <label>使用地点</label>
+          <input type="text" id="borrowUseLocation" placeholder="如：实验室 A301" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>备注</label>
+        <textarea id="borrowRemark" rows="2" placeholder="可选填写其他说明"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('borrowModal')">取消</button>
+        <button class="btn btn-primary" onclick="submitBorrow()">提交申请</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 审批弹窗 -->
+  <div class="modal-overlay" id="approveModal">
+    <div class="modal">
+      <h3 id="approveModalTitle">审批借出申请</h3>
+      <input type="hidden" id="approveRecordId" />
+      <div id="approveModifySection" style="display:none;margin-bottom:12px;padding:10px;background:#fffbe6;border-radius:6px;font-size:13px;">
+        <strong>管理员可修改：</strong>
+        <div style="margin-top:8px;">
+          <label style="font-size:12px;">应还日期</label>
+          <input type="date" id="approveReturnDate" style="width:100%;padding:6px;margin-top:4px;" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>审批意见</label>
+        <textarea id="approveRemark" placeholder="请输入审批意见"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('approveModal')">取消</button>
+        <button class="btn btn-danger" onclick="rejectRecord()">拒绝</button>
+        <button class="btn btn-success" onclick="approveRecord()">批准</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 领取确认弹窗 -->
+  <div class="modal-overlay" id="pickupModal">
+    <div class="modal">
+      <h3>领取确认</h3>
+      <input type="hidden" id="pickupRecordId" />
+      <div style="margin-bottom:12px;padding:10px;background:#f0f9ff;border-radius:6px;font-size:13px;">
+        <strong>设备信息：</strong><span id="pickupDeviceInfo"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>领取人</label>
+          <select id="pickupPerson">
+            <option value="">请选择领取人</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>领取时间</label>
+          <input type="date" id="pickupDate" readonly />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>设备状态确认</label>
+        <select id="pickupEquipmentStatus">
+          <option value="完好">完好</option>
+          <option value="轻微磨损">轻微磨损</option>
+          <option value="有损坏">有损坏</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>领取备注</label>
+        <textarea id="pickupRemark" rows="2" placeholder="可选填写领取时的设备情况说明"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('pickupModal')">取消</button>
+        <button class="btn btn-success" onclick="confirmPickup()">确认领取</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 归还申请弹窗 -->
+  <div class="modal-overlay" id="returnApplyModal">
+    <div class="modal" style="max-width:500px;">
+      <h3>提交归还申请</h3>
+      <input type="hidden" id="returnApplyRecordId" />
+      <div style="margin-bottom:12px;padding:10px;background:#f0f9ff;border-radius:6px;font-size:13px;">
+        <strong>设备信息：</strong><span id="returnApplyDeviceInfo"></span>
+      </div>
+      <div class="form-group">
+        <label>预计归还时间 *</label>
+        <input type="datetime-local" id="returnApplyTime" />
+      </div>
+      <div class="form-group">
+        <label>预计归还地点 *</label>
+        <input type="text" id="returnApplyLocation" placeholder="如：实验室A301" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('returnApplyModal')">取消</button>
+        <button class="btn btn-primary" onclick="submitReturnApply()">提交申请</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 归还验收弹窗 -->
+  <div class="modal-overlay" id="returnModal">
+    <div class="modal" style="max-width:600px;">
+      <h3>归还验收</h3>
+      <input type="hidden" id="returnRecordId" />
+      <div style="margin-bottom:12px;padding:10px;background:#f0f9ff;border-radius:6px;font-size:13px;">
+        <strong>设备信息：</strong><span id="returnDeviceInfo"></span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>归还地点</label>
+          <input type="text" id="returnLocation" placeholder="如：实验室A301" />
+        </div>
+        <div class="form-group">
+          <label>验收人</label>
+          <select id="returnVerifier">
+            <option value="">请选择验收人</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>验收结果 *</label>
+        <select id="returnResult" onchange="toggleDamageFields()">
+          <option value="">请选择验收结果</option>
+          <option value="完好">✅ 完好 - 设备正常，状态变为"在库-可用"</option>
+          <option value="损坏"> 损坏 - 设备故障，状态变为"在库-待维修"</option>
+          <option value="缺件">⚠️ 缺件 - 配件不全，标记"配件不全"</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>配件核对</label>
+        <textarea id="returnAccessories" rows="2" placeholder="如：电源线齐全、鼠标完好、说明书完整"></textarea>
+      </div>
+      <div class="form-group" id="damageDescGroup" style="display:none;">
+        <label>损坏/缺件说明 *</label>
+        <textarea id="returnDamageDesc" rows="3" placeholder="请详细说明损坏情况或缺失配件"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('returnModal')">取消</button>
+        <button class="btn btn-primary" onclick="submitReturn()">确认归还</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 续借弹窗 -->
+  <div class="modal-overlay" id="renewalModal">
+    <div class="modal">
+      <h3>申请续借</h3>
+      <input type="hidden" id="renewalRecordId" />
+      <div class="form-group">
+        <label>新的归还日期</label>
+        <input type="date" id="renewalDate" />
+      </div>
+      <div class="form-group">
+        <label>续借理由</label>
+        <textarea id="renewalRemark" placeholder="请输入续借理由"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('renewalModal')">取消</button>
+        <button class="btn btn-primary" onclick="submitRenewal()">提交续借</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 续借审批弹窗 -->
+  <div class="modal-overlay" id="renewalApproveModal">
+    <div class="modal" style="max-width:500px;">
+      <h3>续借审批</h3>
+      <input type="hidden" id="renewalApproveRecordId" />
+      <div style="margin-bottom:12px;padding:10px;background:#f0f9ff;border-radius:6px;font-size:13px;">
+        <div><strong>设备：</strong><span id="renewalApproveDevice"></span></div>
+        <div><strong>借用人：</strong><span id="renewalApproveBorrower"></span></div>
+        <div style="margin-top:6px;"><strong>续借申请：</strong><span id="renewalApproveDateRange"></span></div>
+        <div><strong>续借理由：</strong><span id="renewalApproveRemark"></span></div>
+      </div>
+      <div class="form-group">
+        <label>审批意见</label>
+        <textarea id="renewalApproveRemarkInput" placeholder="请输入审批意见"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('renewalApproveModal')">取消</button>
+        <button class="btn btn-danger" onclick="rejectRenewal()">拒绝</button>
+        <button class="btn btn-success" onclick="approveRenewal()">批准</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 逾期告警弹窗 -->
+  <div class="modal-overlay" id="overdueWarningModal">
+    <div class="modal" style="max-width:450px;">
+      <h3>⚠️ 逾期告警</h3>
+      <input type="hidden" id="overdueWarningRecordId" />
+      <div style="margin-bottom:12px;padding:10px;background:#fef2f2;border-radius:6px;font-size:13px;">
+        <strong>设备：</strong><span id="overdueWarningDevice"></span><br/>
+        <strong>借用人：</strong><span id="overdueWarningBorrower"></span><br/>
+        <strong>逾期天数：</strong><span id="overdueWarningDays"></span>
+      </div>
+      <div class="form-group">
+        <label>告警备注</label>
+        <textarea id="overdueWarningRemarkInput" rows="3" placeholder="请输入告警说明，如：已电话通知借用人"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-light" onclick="closeModal('overdueWarningModal')">取消</button>
+        <button class="btn btn-danger" onclick="submitOverdueWarning()">确认告警</button>
+      </div>
+    </div>
+  </div>
+
+  <script>console.log('=== equipment-borrow.html v2026052738 已加载 ===');</script>
+  <script src="/equipment-borrow.js?t=2026052732"></script>
+</body>
+</html>

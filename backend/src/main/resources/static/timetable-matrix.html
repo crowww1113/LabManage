@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>课表矩阵视图</title>
+    <script src="api-fetch.js"></script>
+    <script src="js/common.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; padding: 20px; background: #fff; color: #333; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+        label { font-weight: 600; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        textarea { min-height: 80px; resize: vertical; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: #fff; font-size: 14px; font-weight: 600; }
+        .btn:hover { background: #0056b3; }
+        .timetable-wrapper { overflow-x: auto; }
+        table.timetable { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.timetable th, table.timetable td { border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; }
+        table.timetable th { background: #f5f5f5; font-size: 14px; white-space: nowrap; }
+        table.timetable th:first-child { width: 120px; }
+        table.timetable td { height: 80px; font-size: 13px; cursor: default; transition: background-color 0.2s; }
+        .bg-central { background-color: #f8f9fa; cursor: pointer; }
+        .bg-central:hover { background-color: #e9ecef; }
+        .bg-approved-temp { background-color: #cce5ff; }
+        .bg-pending-temp { background-color: #fff3cd; }
+        .bg-approved-course { background-color: #d4edda; }
+        .bg-pending-course { background-color: #ffe8d6; }
+        .bg-rejected { background-color: #e2e3e5; }
+        .bg-pending-reservation { background-color: #fff3cd; border: 2px dashed #ffc107; }
+        .cell-free-text { color: #6c757d; font-weight: 600; }
+        .cell-occupied-text { color: #333; }
+        .cell-occupied-text .course-name { font-weight: 600; display: block; margin-bottom: 2px; }
+        .cell-occupied-text .teacher-name { font-size: 12px; }
+        .cell-occupied-text .clazz-name { font-size: 12px; color: #856404; }
+        .cell-summary { display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center; min-height: 64px; }
+        .cell-summary-main { font-size: 15px; font-weight: 700; }
+        .cell-summary-sub { font-size: 12px; color: #555; }
+        .cell-summary-extra { font-size: 11px; color: #666; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cell-summary-empty { color: #666; }
+        .summary-low { background: #eef9f0; }
+        .summary-medium { background: #fff8e1; }
+        .summary-high { background: #fff1df; }
+        .summary-full { background: #fdecea; }
+        .summary-clickable { cursor: pointer; }
+        .summary-clickable:hover { filter: brightness(0.98); }
+        .slot-detail-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .slot-detail-pill { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #f1f3f5; color: #495057; }
+        .slot-detail-list { display: flex; flex-direction: column; gap: 10px; }
+        .slot-detail-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff; }
+        .slot-detail-card.pending { border-color: #ffc107; background: #fffdf2; }
+        .slot-detail-card.rejected { border-color: #ced4da; background: #f8f9fa; }
+        .slot-detail-card-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 8px; }
+        .slot-detail-room { font-size: 15px; font-weight: 700; }
+        .slot-detail-course { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        .slot-detail-meta { font-size: 12px; color: #666; line-height: 1.6; }
+        .slot-detail-empty-rooms { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #ddd; }
+        .slot-detail-empty-rooms h3 { margin: 0 0 8px; font-size: 14px; }
+        .slot-detail-empty-rooms p { margin: 0; font-size: 13px; color: #666; line-height: 1.6; }
+        .slot-detail-link { color: #007bff; cursor: pointer; font-size: 12px; font-weight: 600; }
+        .slot-detail-link:hover { text-decoration: underline; }
+        .cell-status-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; margin-left: 4px; }
+        .badge-temp { background: #007bff; color: #fff; }
+        .badge-course { background: #28a745; color: #fff; }
+        .badge-reservation { background: #6c757d; color: #fff; }
+        .badge-pending { background: #ffc107; color: #333; }
+        .badge-rejected { background: #6c757d; color: #fff; }
+        .cell-pending { cursor: pointer; position: relative; }
+        .cell-pending:hover { outline: 2px solid #007bff; outline-offset: -2px; }
+        .cell-rejected-text { text-decoration: line-through; color: #6c757d; }
+        .empty { padding: 40px; text-align: center; color: #666; border: 1px dashed #ddd; border-radius: 4px; }
+        .modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; }
+        .modal-content { background: #fff; width: 92%; max-width: 600px; margin: 5% auto; border-radius: 8px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-header h2 { margin: 0; font-size: 18px; }
+        .close { font-size: 28px; cursor: pointer; color: #999; }
+        .close:hover { color: #333; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .slot-time { font-size: 11px; color: #888; display: block; margin-top: 2px; }
+        .info-section { background: #f8f9fa; border-radius: 4px; padding: 12px; margin-bottom: 16px; }
+        .info-section p { margin: 4px 0; font-size: 14px; }
+        .info-label { font-weight: 600; color: #555; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .full-row { grid-column: 1 / -1; }
+        .required::after { content: " *"; color: #dc3545; }
+        /* 视图切换标签 */
+        .view-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+        .view-tab { padding: 10px 24px; cursor: pointer; border: none; background: transparent; font-size: 15px; font-weight: 600; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .view-tab:hover { color: #007bff; }
+        .view-tab.active { color: #007bff; border-bottom-color: #007bff; }
+        /* 列表视图 */
+        .list-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .btn-export { background: #28a745; }
+        .btn-export:hover { background: #218838; }
+        .total-info { color: #666; font-size: 14px; }
+        .total-info strong { color: #333; }
+        table.list-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        table.list-table th, table.list-table td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+        table.list-table th { background: #f5f5f5; font-weight: 600; white-space: nowrap; cursor: pointer; user-select: none; }
+        table.list-table th:hover { background: #e9ecef; }
+        table.list-table th .sort-arrow { margin-left: 4px; font-size: 11px; color: #aaa; }
+        table.list-table th .sort-arrow.active { color: #007bff; }
+        table.list-table td { vertical-align: middle; }
+        table.list-table tbody tr:hover { background: #f8f9fa; }
+        .status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-APPROVED { background: #d4edda; color: #155724; }
+        .status-PENDING { background: #fff3cd; color: #856404; }
+        .status-REJECTED { background: #f8d7da; color: #721c24; }
+        .status-CANCELLED { background: #e2e3e5; color: #383d41; }
+        .status-IN_USE { background: #cce5ff; color: #004085; }
+        .status-COMPLETED { background: #d4edda; color: #155724; }
+        .source-tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+        .source-APPLICATION { background: #007bff; color: #fff; }
+        .source-RESERVATION { background: #6c757d; color: #fff; }
+        /* 分页 */
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 20px; }
+        .pagination button { padding: 6px 14px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; }
+        .pagination button:hover:not(:disabled) { background: #007bff; color: #fff; border-color: #007bff; }
+        .pagination button:disabled { color: #ccc; cursor: not-allowed; }
+        .pagination .page-info { font-size: 14px; color: #666; }
+        .pagination .page-input { width: 50px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 14px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<h1>课表视图</h1>
+
+<div class="view-tabs">
+    <button class="view-tab active" data-view="matrix" onclick="switchView('matrix')">矩阵视图</button>
+    <button class="view-tab" data-view="list" onclick="switchView('list')">列表视图</button>
+</div>
+
+<div class="toolbar">
+    <div class="form-group">
+        <label for="termId">学期</label>
+        <select id="termId">
+            <option value="">加载中...</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="weekNo">周次</label>
+        <input id="weekNo" type="number" value="1" min="1">
+    </div>
+    <div class="form-group">
+        <label for="buildingSelect">楼栋</label>
+        <select id="buildingSelect">
+            <option value="">加载中...</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="roomSelect">房间</label>
+        <select id="roomSelect">
+            <option value="">请先选择楼栋</option>
+        </select>
+    </div>
+    <button class="btn" onclick="loadCurrentView()">查询</button>
+</div>
+
+<div id="matrixView">
+    <div id="timetableWrapper"></div>
+</div>
+
+<div id="listView" class="hidden">
+    <div class="list-actions">
+        <span class="total-info">共 <strong id="totalCount">0</strong> 条记录</span>
+        <button class="btn btn-export" onclick="exportCSV()">导出为 CSV</button>
+    </div>
+    <div style="overflow-x: auto;">
+        <table class="list-table">
+            <thead>
+                <tr>
+                    <th data-sort="courseName" onclick="sortBy('courseName')">课程名称<span class="sort-arrow" id="arrow-courseName"></span></th>
+                    <th>班级</th>
+                    <th>教师</th>
+                    <th data-sort="dayOfWeek" onclick="sortBy('dayOfWeek')">星期<span class="sort-arrow" id="arrow-dayOfWeek"></span></th>
+                    <th data-sort="timeSlotName" onclick="sortBy('timeSlotName')">节次<span class="sort-arrow" id="arrow-timeSlotName"></span></th>
+                    <th>楼宇实验室</th>
+                    <th data-sort="status" onclick="sortBy('status')">状态<span class="sort-arrow" id="arrow-status"></span></th>
+                </tr>
+            </thead>
+            <tbody id="listTableBody"></tbody>
+        </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<div id="reservationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>预约实验室</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="info-section" id="slotInfo"></div>
+        <div class="form-grid">
+            <!-- 自动带入的上下文信息（只读） -->
+            <div class="form-group">
+                <label class="required">实验室</label>
+                <input id="modalLabName" type="text" readonly placeholder="自动带入">
+            </div>
+            <div class="form-group">
+                <label class="required">使用日期</label>
+                <input id="modalUseDate" type="date" readonly>
+            </div>
+            <div class="form-group">
+                <label class="required">星期</label>
+                <input id="modalDayOfWeek" type="text" readonly placeholder="自动带入">
+            </div>
+            <div class="form-group">
+                <label class="required">节次</label>
+                <input id="modalTimeSlot" type="text" readonly placeholder="自动带入">
+            </div>
+            <input type="hidden" id="modalTimeSlotId">
+            <input type="hidden" id="modalDayOfWeekNum">
+
+            <!-- 人性化字段 -->
+            <div class="form-group full-row">
+                <label class="required" for="rProjectName">开展项目名称</label>
+                <input id="rProjectName" type="text" placeholder="请输入项目名称">
+            </div>
+            <div class="form-group">
+                <label class="required" for="rProjectCategory">项目类别</label>
+                <select id="rProjectCategory">
+                    <option value="">请选择</option>
+                    <option value="课程教学项目">课程教学项目</option>
+                    <option value="学生科研项目">学生科研项目</option>
+                    <option value="创新创业项目">创新创业项目</option>
+                    <option value="学科竞赛项目">学科竞赛项目</option>
+                    <option value="毕业设计项目">毕业设计项目</option>
+                    <option value="开放实验项目">开放实验项目</option>
+                    <option value="校企合作项目">校企合作项目</option>
+                    <option value="其他项目">其他项目</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="required" for="rProjectLeader">项目负责人</label>
+                <input id="rProjectLeader" type="text" placeholder="请输入负责人姓名">
+            </div>
+            <div class="form-group">
+                <label class="required" for="rContactPhone">联系电话</label>
+                <input id="rContactPhone" type="tel" placeholder="请输入联系电话">
+            </div>
+            <div class="form-group">
+                <label class="required" for="rStudentCount">学生人数</label>
+                <input id="rStudentCount" type="number" min="1" placeholder="请输入学生人数">
+            </div>
+            <div class="form-group">
+                <label class="required" for="rDuration">预计使用时长（小时）</label>
+                <input id="rDuration" type="number" min="1" step="0.5" placeholder="请输入时长">
+            </div>
+            <div class="form-group">
+                <label for="rGrade">年级</label>
+                <input id="rGrade" type="text" placeholder="如：2025级">
+            </div>
+            <div class="form-group">
+                <label class="required" for="rClassId">班级</label>
+                <select id="rClassId">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="rMemberCount">参与人数</label>
+                <input id="rMemberCount" type="number" min="0" placeholder="如：45">
+            </div>
+            <div class="form-group">
+                <label for="rGroupCount">实验组数</label>
+                <input id="rGroupCount" type="number" min="0" placeholder="选填">
+            </div>
+            <div class="form-group">
+                <label for="rStudentsPerGroup">每组人数</label>
+                <input id="rStudentsPerGroup" type="number" min="0" placeholder="选填">
+            </div>
+            <div class="form-group full-row">
+                <label class="required" for="rExperimentContent">实验内容</label>
+                <textarea id="rExperimentContent" placeholder="请输入实验内容"></textarea>
+            </div>
+            <div class="form-group full-row">
+                <label for="rRemark">备注</label>
+                <textarea id="rRemark" rows="2" placeholder="选填"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+            <button class="btn btn-success" onclick="submitReservation()">确认预约</button>
+        </div>
+    </div>
+</div>
+
+<div id="slotDetailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>楼栋时段明细</h2>
+            <span class="close" onclick="closeSlotDetailModal()">&times;</span>
+        </div>
+        <div class="info-section" id="slotDetailInfo"></div>
+        <div id="slotDetailBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeSlotDetailModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentData = null;
+    let selectedSlot = null;
+    let currentView = 'matrix';
+    let listPage = 0;
+    let listSize = 20;
+    let listSort = '';
+    let listTotalPages = 0;
+    let termsMap = {}; // 存储学期信息，key为termId，value为学期对象
+    let buildingRoomsMap = {};
+    let selectedBuildingTotalRooms = 0;
+
+    async function initFilters() {
+        const termSelect = document.getElementById('termId');
+        try {
+            const terms = await apiFetch('/api/terms');
+            if (terms && terms.length > 0) {
+                // 保存学期信息到 map
+                terms.forEach(term => {
+                    termsMap[term.id] = term;
+                });
+                const today = new Date().toISOString().split('T')[0];
+                let selectedId = null;
+                termSelect.innerHTML = terms.map(term => {
+                    const isCurrent = today >= term.startDate && today <= term.endDate;
+                    if (isCurrent) selectedId = term.id;
+                    return `<option value="${term.id}"${isCurrent ? ' selected' : ''}>${term.termName}</option>`;
+                }).join('');
+                if (!selectedId && terms.length > 0) {
+                    termSelect.value = terms[terms.length - 1].id;
+                }
+            } else {
+                termSelect.innerHTML = '<option value="">无可用学期</option>';
+            }
+        } catch (error) {
+            console.error('[initFilters] 学期列表加载失败:', error);
+            termSelect.innerHTML = '<option value="">学期加载失败</option>';
+        }
+
+        await loadBuildings();
+        await loadClasses();
+        loadCurrentView();
+    }
+
+    async function loadClasses() {
+        const classSelect = document.getElementById('rClassId');
+        try {
+            const list = await apiFetch('/api/clazzes');
+            classSelect.innerHTML = '<option value="">请选择班级</option>';
+            list.forEach(c => {
+                classSelect.innerHTML += `<option value="${c.id}">${c.clazzName || '未知班级'}</option>`;
+            });
+        } catch (e) {
+            console.error('[loadClasses] 班级列表加载失败:', e);
+            classSelect.innerHTML = '<option value="">班级加载失败</option>';
+        }
+    }
+
+    // 计算精确日期：根据开学日期、周次、星期推算真实日期
+    // dayOfWeek: 1=周一, 2=周二, ..., 7=周日
+    function calculateExactDate(startDate, weekNumber, dayOfWeek) {
+        if (!startDate || !weekNumber || !dayOfWeek) {
+            return null;
+        }
+        const start = new Date(startDate);
+        // 计算偏移天数：(weekNumber - 1) * 7 + (dayOfWeek - 1)
+        const offsetDays = (weekNumber - 1) * 7 + (dayOfWeek - 1);
+        const targetDate = new Date(start);
+        targetDate.setDate(start.getDate() + offsetDays);
+        // 格式化为 YYYY-MM-DD
+        const year = targetDate.getFullYear();
+        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const day = String(targetDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // 加载楼栋列表
+    async function loadBuildings() {
+        const buildingSelect = document.getElementById('buildingSelect');
+        try {
+            const buildings = await apiFetch('/api/buildings');
+            buildingSelect.innerHTML = '<option value="">请选择楼栋</option>';
+            buildings.forEach(b => {
+                buildingSelect.innerHTML += `<option value="${b.id}" data-name="${b.name}">${b.name}</option>`;
+            });
+            // 默认选中第一个楼栋
+            if (buildings.length > 0) {
+                buildingSelect.value = buildings[0].id;
+                await loadRooms(buildings[0].id);
+            }
+        } catch (error) {
+            console.error('[loadBuildings] 楼栋列表加载失败:', error);
+            buildingSelect.innerHTML = '<option value="">楼栋加载失败</option>';
+        }
+    }
+
+    // 加载房间列表（根据楼栋ID）
+    async function loadRooms(buildingId) {
+        const roomSelect = document.getElementById('roomSelect');
+        if (!buildingId) {
+            selectedBuildingTotalRooms = 0;
+            roomSelect.innerHTML = '<option value="">请先选择楼栋</option>';
+            return;
+        }
+        try {
+            const rooms = await apiFetch(`/api/rooms?buildingId=${buildingId}`);
+            buildingRoomsMap[buildingId] = rooms;
+            selectedBuildingTotalRooms = rooms.length;
+            roomSelect.innerHTML = '<option value="">全部房间</option>';
+            rooms.forEach(r => {
+                roomSelect.innerHTML += `<option value="${r.id}" data-code="${r.code}">${r.code}</option>`;
+            });
+        } catch (error) {
+            console.error('[loadRooms] 房间列表加载失败:', error);
+            selectedBuildingTotalRooms = 0;
+            roomSelect.innerHTML = '<option value="">房间加载失败</option>';
+        }
+    }
+
+    // 楼栋选择变化时加载对应房间
+    document.getElementById('buildingSelect').addEventListener('change', async function() {
+        await loadRooms(this.value);
+    });
+
+    function switchView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.view === view);
+        });
+        document.getElementById('matrixView').classList.toggle('hidden', view !== 'matrix');
+        document.getElementById('listView').classList.toggle('hidden', view !== 'list');
+        if (view === 'list') {
+            loadTimetableList();
+        }
+    }
+
+    function loadCurrentView() {
+        if (currentView === 'list') {
+            loadTimetableList();
+        } else {
+            loadTimetable();
+        }
+    }
+
+
+    async function loadTimetable() {
+        console.log('按钮已点击，准备发送请求...');
+
+        const termId = document.getElementById('termId').value;
+        const weekNo = document.getElementById('weekNo').value;
+        const buildingSelect = document.getElementById('buildingSelect');
+        const roomSelect = document.getElementById('roomSelect');
+        const buildingName = buildingSelect.options[buildingSelect.selectedIndex]?.dataset.name || '';
+        const roomNumber = roomSelect.options[roomSelect.selectedIndex]?.dataset.code || '';
+
+        console.log('[loadTimetable] 筛选条件:', { termId, weekNo, buildingName, roomNumber });
+
+        if (!termId || !weekNo || !buildingName) {
+            console.warn('[loadTimetable] 筛选条件不完整，无法发送请求');
+            alert('请填写完整的筛选条件（学期、周次、楼栋）');
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ termId, weekNo, buildingName });
+            if (roomNumber) params.append('roomNumber', roomNumber);
+            console.log('请求发送成功，等待响应...');
+            currentData = await apiFetch(`/api/timetable/matrix?${params}`);
+            // 保存当前选中的楼栋和房间名称到 currentData
+            currentData.buildingName = buildingName;
+            currentData.roomNumber = roomNumber;
+            console.log('[loadTimetable] 课表数据已返回，共', currentData?.timeSlots?.length ?? 0, '个节次');
+            renderTimetable(currentData);
+        } catch (error) {
+            console.error('请求发生异常:', error);
+            alert('加载课表失败：' + error.message);
+        }
+    }
+
+    function getClassForSchedule(item) {
+        var status = item.status || '';
+        var sourceType = item.sourceType || '';
+        var applicationType = item.applicationType || '';
+
+        if (status === 'REJECTED' || status === 'CANCELLED') {
+            return 'bg-rejected';
+        }
+        if (sourceType === 'RESERVATION') {
+            if (status === 'PENDING' || status === 'SUBMITTED' || status === 'APPROVING') return 'bg-pending-reservation';
+            return 'bg-central';
+        }
+        if (!applicationType) {
+            if (status === 'APPROVED' || status === 'IN_USE') return 'bg-approved-course';
+            if (status === 'PENDING') return 'bg-pending-course';
+            return 'bg-central';
+        }
+        if (applicationType === 'TEMPORARY') {
+            if (status === 'APPROVED' || status === 'IN_USE') return 'bg-approved-temp';
+            if (status === 'PENDING') return 'bg-pending-temp';
+        }
+        if (applicationType === 'COURSE') {
+            if (status === 'APPROVED' || status === 'IN_USE') return 'bg-approved-course';
+            if (status === 'PENDING') return 'bg-pending-course';
+        }
+        return 'bg-central';
+    }
+
+    function getBadgeHtml(item) {
+        var sourceType = item.sourceType || '';
+        var applicationType = item.applicationType || '';
+        var status = item.status || '';
+
+        if (status === 'REJECTED') return '<span class="cell-status-badge badge-rejected">已拒绝</span>';
+        if (status === 'CANCELLED') return '<span class="cell-status-badge badge-rejected">已取消</span>';
+        if (sourceType === 'RESERVATION') {
+            if (status === 'PENDING' || status === 'SUBMITTED' || status === 'APPROVING') {
+                return '<span class="cell-status-badge badge-pending">待审批</span>';
+            }
+            return '<span class="cell-status-badge badge-reservation">集中排课</span>';
+        }
+        if (applicationType === 'TEMPORARY') {
+            return '<span class="cell-status-badge badge-temp">临时预约</span>';
+        }
+        if (applicationType === 'COURSE') {
+            var label = status === 'PENDING' ? '待审批' : '授课';
+            var cls = status === 'PENDING' ? 'badge-pending' : 'badge-course';
+            return '<span class="cell-status-badge ' + cls + '">' + label + '</span>';
+        }
+        return '';
+    }
+
+    function isRoomView() {
+        const roomSelect = document.getElementById('roomSelect');
+        return !!(roomSelect && roomSelect.value);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getUniqueRoomCount(items) {
+        return new Set((items || []).map(item => item.roomNumber).filter(Boolean)).size;
+    }
+
+    function summarizeSlotItems(items, totalRooms) {
+        const summary = {
+            occupiedCount: getUniqueRoomCount(items),
+            freeCount: 0,
+            courseCount: 0,
+            reservationCount: 0,
+            pendingCount: 0,
+            previewText: '',
+            cssClass: 'summary-low'
+        };
+        summary.freeCount = Math.max((totalRooms || 0) - summary.occupiedCount, 0);
+
+        const previewRooms = [];
+        (items || []).forEach(item => {
+            const status = item.status || '';
+            if (status === 'PENDING' || status === 'SUBMITTED' || status === 'APPROVING') {
+                summary.pendingCount += 1;
+            }
+            if (item.sourceType === 'RESERVATION') {
+                summary.reservationCount += 1;
+            } else {
+                summary.courseCount += 1;
+            }
+            if (previewRooms.length < 1) {
+                const roomLabel = item.roomNumber || '未知房间';
+                const courseLabel = item.courseName || '未命名课程';
+                previewRooms.push(`${roomLabel} ${courseLabel}`);
+            }
+        });
+
+        if (summary.occupiedCount === 0) {
+            summary.cssClass = 'summary-low';
+        } else if (!totalRooms || summary.occupiedCount >= totalRooms) {
+            summary.cssClass = 'summary-full';
+        } else {
+            const ratio = summary.occupiedCount / totalRooms;
+            summary.cssClass = ratio >= 0.5 ? 'summary-high' : 'summary-medium';
+        }
+
+        summary.previewText = previewRooms[0] || '';
+        return summary;
+    }
+
+    function buildSummaryCell(items) {
+        const summary = summarizeSlotItems(items, selectedBuildingTotalRooms);
+        const extraText = summary.previewText
+            ? `${summary.previewText}${summary.occupiedCount > 1 ? ` 等${summary.occupiedCount}间` : ''}`
+            : '暂无明细';
+        return {
+            cssClass: `${summary.cssClass} summary-clickable`,
+            html: `<div class="cell-summary">
+                <div class="cell-summary-main">占用 ${summary.occupiedCount}${selectedBuildingTotalRooms ? ` / 空闲 ${summary.freeCount}` : ''}</div>
+                <div class="cell-summary-sub">授课 ${summary.courseCount} · 预约 ${summary.reservationCount} · 待审 ${summary.pendingCount}</div>
+                <div class="cell-summary-extra">${escapeHtml(extraText)}</div>
+            </div>`
+        };
+    }
+
+    function buildPendingLink(item) {
+        return 'location.href=\'schedule-approval-center.html?type=' +
+            (item.sourceType === 'APPLICATION' ? 'application' : 'reservation') +
+            '&id=' + item.id +
+            '&sourceNo=' + encodeURIComponent(item.sourceNo || '') +
+            '&teacherName=' + encodeURIComponent(item.teacherName || '') + '\'';
+    }
+
+    function getSourceLabel(item) {
+        var status = item.status || '';
+        var sourceType = item.sourceType || '';
+        var applicationType = item.applicationType || '';
+
+        if (status === 'REJECTED' || status === 'CANCELLED') return '已取消';
+        if (status === 'PENDING' || status === 'SUBMITTED' || status === 'APPROVING') return '待审批';
+        if (sourceType === 'RESERVATION') return '集中排课';
+        if (applicationType === 'TEMPORARY') return '临时预约';
+        return '授课申请';
+    }
+
+    function renderTimetable(data) {
+        const wrapper = document.getElementById('timetableWrapper');
+
+        if (!data || !data.days || !data.timeSlots || !data.matrix) {
+            wrapper.innerHTML = '<div class="empty">暂无数据</div>';
+            return;
+        }
+
+        const { days, timeSlots, matrix } = data;
+
+        let html = '<table class="timetable"><thead><tr><th>节次 / 时间段</th>';
+        days.forEach(day => {
+            html += `<th>${day}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        timeSlots.forEach((slot, slotIndex) => {
+            html += '<tr>';
+            html += `<td><strong>${slot.slotName}</strong><span class="slot-time">${slot.startTime} - ${slot.endTime}</span></td>`;
+
+            days.forEach((day, dayIndex) => {
+                const items = matrix[dayIndex][slotIndex];
+                if (items && items.length > 0) {
+                    if (isRoomView() || getUniqueRoomCount(items) <= 1) {
+                        const item = items[0];
+                        const cssClass = getClassForSchedule(item);
+                        const isRejected = item.status === 'REJECTED' || item.status === 'CANCELLED';
+                        const isPending = item.status === 'PENDING' || item.status === 'SUBMITTED' || item.status === 'APPROVING';
+                        const pendingClass = isPending ? ' cell-pending' : '';
+                        const onclickAttr = isPending
+                            ? ' onclick="event.stopPropagation();location.href=\'schedule-approval-center.html?type=' +
+                              (item.sourceType === 'APPLICATION' ? 'application' : 'reservation') +
+                              '&id=' + item.id +
+                              '&sourceNo=' + encodeURIComponent(item.sourceNo || '') +
+                              '&teacherName=' + encodeURIComponent(item.teacherName || '') + '\'"'
+                            : '';
+                        html += '<td class="' + cssClass + pendingClass + '"' + onclickAttr + '>';
+                        html += '<div class="' + (isRejected ? 'cell-rejected-text' : 'cell-occupied-text') + '">';
+                        html += '<span class="course-name">' + (item.courseName || '未命名课程') + ' ' + getBadgeHtml(item) + '</span>';
+                        html += '<span class="teacher-name">' + (item.teacherName || '') + '</span>';
+                        html += '<span class="clazz-name">' + (item.clazzName || '') + '</span>';
+                        html += '</div></td>';
+                    } else {
+                        const cellData = buildSummaryCell(items);
+                        html += `<td class="${cellData.cssClass}" onclick="openSlotDetailModal(${dayIndex}, ${slotIndex})">${cellData.html}</td>`;
+                    }
+                } else {
+                    html += `<td class="bg-central" onclick="openReservationModal(${dayIndex}, ${slotIndex})">
+                        <span class="cell-free-text">可预约</span>
+                    </td>`;
+                }
+            });
+
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        wrapper.innerHTML = html;
+    }
+
+    async function loadTimetableList() {
+        const termId = document.getElementById('termId').value;
+        const weekNo = document.getElementById('weekNo').value;
+        const buildingSelect = document.getElementById('buildingSelect');
+        const roomSelect = document.getElementById('roomSelect');
+        const buildingName = buildingSelect.options[buildingSelect.selectedIndex]?.dataset.name || '';
+        const roomNumber = roomSelect.options[roomSelect.selectedIndex]?.dataset.code || '';
+
+        if (!termId || !weekNo || !buildingName) {
+            alert('请填写完整的筛选条件（学期、周次、楼栋）');
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ termId, weekNo, buildingName, page: listPage, size: listSize });
+            if (roomNumber) params.append('roomNumber', roomNumber);
+            if (listSort) params.append('sort', listSort);
+            const data = await apiFetch(`/api/timetable/list?${params}`);
+            listTotalPages = data.totalPages;
+            document.getElementById('totalCount').textContent = data.totalElements;
+            renderList(data.content);
+            renderPagination(data);
+        } catch (error) {
+            alert('加载列表失败：' + error.message);
+        }
+    }
+
+    function renderList(items) {
+        const tbody = document.getElementById('listTableBody');
+        if (!items || items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999;">暂无数据</td></tr>';
+            return;
+        }
+
+        const statusLabels = {
+            'APPROVED': '已通过', 'PENDING': '待审批', 'REJECTED': '已拒绝',
+            'CANCELLED': '已取消', 'IN_USE': '使用中', 'COMPLETED': '已完成',
+            'DRAFT': '草稿', 'SUBMITTED': '已提交'
+        };
+
+        tbody.innerHTML = items.map(item => {
+            const courseName = item.courseName || '-';
+            const sourceTag = item.sourceType === 'APPLICATION'
+                ? '<span class="source-tag source-APPLICATION">申请</span>'
+                : '<span class="source-tag source-RESERVATION">预约</span>';
+            const buildingLab = (item.buildingName || '') + (item.roomNumber ? ' ' + item.roomNumber : '');
+            const dayText = item.dayOfWeekText || (item.dayOfWeek ? '星期' + item.dayOfWeek : '-');
+            const timeSlot = item.timeSlotName || '-';
+            const statusLabel = statusLabels[item.status] || item.status || '-';
+            const statusClass = 'status-' + (item.status || '');
+
+            return `<tr>
+                <td>${courseName}${sourceTag}</td>
+                <td>${item.clazzName || '-'}</td>
+                <td>${item.teacherName || '-'}</td>
+                <td>${dayText}</td>
+                <td>${timeSlot}</td>
+                <td>${buildingLab || '-'}</td>
+                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+            </tr>`;
+        }).join('');
+
+        updateSortArrows();
+    }
+
+    function updateSortArrows() {
+        document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+        if (listSort) {
+            const parts = listSort.split(',');
+            const field = parts[0].trim();
+            const dir = parts.length > 1 ? parts[1].trim() : 'asc';
+            const arrow = document.getElementById('arrow-' + field);
+            if (arrow) {
+                arrow.textContent = dir === 'desc' ? '▼' : '▲';
+                arrow.classList.add('active');
+            }
+        }
+    }
+
+    function sortBy(field) {
+        if (listSort && listSort.startsWith(field + ',')) {
+            const currentDir = listSort.split(',')[1];
+            listSort = field + ',' + (currentDir === 'asc' ? 'desc' : 'asc');
+        } else {
+            listSort = field + ',asc';
+        }
+        loadTimetableList();
+    }
+
+    function renderPagination(data) {
+        const container = document.getElementById('pagination');
+        const page = data.number;
+        const totalPages = data.totalPages;
+        const totalElements = data.totalElements;
+
+        if (totalElements === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        html += `<button ${page === 0 ? 'disabled' : ''} onclick="goToPage(${page - 1})">上一页</button>`;
+        html += `<span class="page-info">第 <input class="page-input" type="number" value="${page + 1}" min="1" max="${totalPages}"
+            onkeydown="if(event.key==='Enter')goToPage(parseInt(this.value)-1)"> / ${totalPages} 页</span>`;
+        html += `<button ${page >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${page + 1})">下一页</button>`;
+        container.innerHTML = html;
+    }
+
+    function goToPage(page) {
+        if (page < 0 || page >= listTotalPages) return;
+        listPage = page;
+        loadTimetableList();
+    }
+
+    function exportCSV() {
+        const tbody = document.getElementById('listTableBody');
+        const rows = tbody.querySelectorAll('tr');
+        if (rows.length === 0 || rows[0].querySelectorAll('td').length <= 1) {
+            alert('没有数据可导出');
+            return;
+        }
+
+        const headers = ['课程名称', '班级', '教师', '星期', '节次', '楼宇实验室', '状态'];
+        let csv = '﻿' + headers.join(',') + '\n';
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const values = Array.from(cells).map(cell => {
+                let text = cell.textContent.replace(/"/g, '""').trim();
+                return '"' + text + '"';
+            });
+            csv += values.join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '排课明细_' + new Date().toISOString().split('T')[0] + '.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function openReservationModal(dayIndex, slotIndex) {
+        const { days, timeSlots, termId, weekNo, buildingName, roomNumber } = currentData;
+        const day = days[dayIndex];
+        const slot = timeSlots[slotIndex];
+        const dayOfWeek = dayIndex + 1;
+
+        selectedSlot = { dayIndex, slotIndex, day, dayOfWeek, slot, termId, weekNo, buildingName, roomNumber };
+
+        // 自动填充上下文信息（只读字段）
+        document.getElementById('modalLabName').value = `${buildingName} - ${roomNumber}`;
+
+        // 计算精确日期：根据学期开学日期 + 周次 + 星期推算
+        const term = termsMap[termId];
+        let useDate = '';
+        if (term && term.startDate) {
+            useDate = calculateExactDate(term.startDate, weekNo, dayOfWeek);
+        }
+        // 如果计算失败，回退到今天
+        if (!useDate) {
+            useDate = new Date().toISOString().split('T')[0];
+        }
+        document.getElementById('modalUseDate').value = useDate;
+
+        document.getElementById('modalDayOfWeek').value = day;
+        document.getElementById('modalDayOfWeekNum').value = dayOfWeek;
+        document.getElementById('modalTimeSlot').value = `${slot.slotName}（${slot.startTime} - ${slot.endTime}）`;
+        document.getElementById('modalTimeSlotId').value = slot.id;
+
+        document.getElementById('slotInfo').innerHTML = `
+            <p><span class="info-label">学期ID：</span>${termId}</p>
+            <p><span class="info-label">周次：</span>第${weekNo}周</p>
+            <p><span class="info-label">楼宇：</span>${buildingName}</p>
+            <p><span class="info-label">房间：</span>${roomNumber}</p>
+            <p><span class="info-label">星期：</span>${day}（${dayOfWeek}）</p>
+            <p><span class="info-label">节次：</span>${slot.slotName}（${slot.startTime} - ${slot.endTime}）</p>
+        `;
+
+        clearForm();
+        document.getElementById('reservationModal').style.display = 'block';
+    }
+
+    function clearForm() {
+        ['rProjectName', 'rProjectCategory', 'rProjectLeader', 'rContactPhone', 'rStudentCount', 'rDuration',
+         'rGrade', 'rClassId', 'rMemberCount', 'rGroupCount', 'rStudentsPerGroup', 'rExperimentContent', 'rRemark'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    }
+
+    function closeModal() {
+        document.getElementById('reservationModal').style.display = 'none';
+        selectedSlot = null;
+    }
+
+    async function submitReservation() {
+        if (!selectedSlot) return;
+
+        const { slot, dayOfWeek, termId, weekNo, buildingName, roomNumber } = selectedSlot;
+
+        // 获取表单值
+        const projectName = document.getElementById('rProjectName').value.trim();
+        const projectCategory = document.getElementById('rProjectCategory').value;
+        const projectLeader = document.getElementById('rProjectLeader').value.trim();
+        const contactPhone = document.getElementById('rContactPhone').value.trim();
+        const studentCount = document.getElementById('rStudentCount').value;
+        const duration = document.getElementById('rDuration').value;
+        const experimentContent = document.getElementById('rExperimentContent').value.trim();
+
+        // 必填项校验
+        if (!projectName || !projectCategory || !projectLeader || !contactPhone || !studentCount || !duration || !experimentContent) {
+            alert('请填写所有必填项（标记 * 的字段）');
+            return;
+        }
+
+        // 构建 payload
+        const payload = {
+            termId: Number(termId),
+            weekNo: Number(weekNo),
+            buildingName: buildingName,
+            roomNumber: roomNumber,
+            useDate: document.getElementById('modalUseDate').value,
+            dayOfWeek: dayOfWeek,
+            timeSlotId: slot.id,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            projectName: projectName,
+            projectCategory: projectCategory,
+            projectLeader: projectLeader,
+            contactPhone: contactPhone,
+            studentCount: Number(studentCount),
+            duration: Number(duration),
+            experimentContent: experimentContent
+        };
+
+        // 可选字段
+        const grade = document.getElementById('rGrade').value.trim();
+        const classId = parseInt(document.getElementById('rClassId').value);
+        const className = document.getElementById('rClassId').options[document.getElementById('rClassId').selectedIndex]?.text || '';
+        const memberCount = document.getElementById('rMemberCount').value;
+        const groupCount = document.getElementById('rGroupCount').value;
+        const studentsPerGroup = document.getElementById('rStudentsPerGroup').value;
+        const remark = document.getElementById('rRemark').value.trim();
+
+        if (grade) payload.grade = grade;
+        if (classId) payload.clazzId = classId;
+        if (className && className !== '请选择班级' && className !== '班级加载失败') payload.className = className;
+        if (memberCount) payload.memberCount = Number(memberCount);
+        if (groupCount) payload.groupCount = Number(groupCount);
+        if (studentsPerGroup) payload.studentsPerGroup = Number(studentsPerGroup);
+        if (remark) payload.remark = remark;
+
+        try {
+            await apiFetch('/api/schedule-reservations', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            alert('预约成功，等待审批');
+            closeModal();
+            await loadTimetable();
+        } catch (error) {
+            alert('预约失败：' + error.message);
+        }
+    }
+
+    function openSlotDetailModal(dayIndex, slotIndex) {
+        if (!currentData || !currentData.matrix) return;
+        const items = currentData.matrix[dayIndex][slotIndex];
+        if (!items || items.length === 0) return;
+        renderSlotDetailModal(items, dayIndex, slotIndex);
+        document.getElementById('slotDetailModal').style.display = 'block';
+    }
+
+    function renderSlotDetailModal(items, dayIndex, slotIndex) {
+        const { days, timeSlots, weekNo, buildingName } = currentData;
+        const day = days[dayIndex];
+        const slot = timeSlots[slotIndex];
+        const uniqueRoomNumbers = new Set(items.map(item => item.roomNumber).filter(Boolean));
+        const occupiedCount = uniqueRoomNumbers.size;
+        const freeCount = Math.max(selectedBuildingTotalRooms - occupiedCount, 0);
+
+        document.getElementById('slotDetailInfo').innerHTML =
+            '<div class="slot-detail-summary">' +
+            '<span class="slot-detail-pill">楼栋：' + escapeHtml(buildingName) + '</span>' +
+            '<span class="slot-detail-pill">第' + weekNo + '周</span>' +
+            '<span class="slot-detail-pill">' + escapeHtml(day) + '</span>' +
+            '<span class="slot-detail-pill">' + escapeHtml(slot.slotName) + ' ' + slot.startTime + '-' + slot.endTime + '</span>' +
+            '<span class="slot-detail-pill">占用 ' + occupiedCount + ' / 空闲 ' + freeCount + '</span>' +
+            '</div>';
+
+        let bodyHtml = '<div class="slot-detail-list">';
+        items.forEach(function(item) {
+            var status = item.status || '';
+            var isPending = status === 'PENDING' || status === 'SUBMITTED' || status === 'APPROVING';
+            var isRejected = status === 'REJECTED' || status === 'CANCELLED';
+            var detailBgClass = getClassForSchedule(item);
+            bodyHtml += '<div class="slot-detail-card ' + detailBgClass + '">';
+            bodyHtml += '<div class="slot-detail-card-top">';
+            bodyHtml += '<span class="slot-detail-room">' + escapeHtml(item.roomNumber || '未知房间') + '</span>';
+            bodyHtml += '<span>' + getBadgeHtml(item) + '</span>';
+            bodyHtml += '</div>';
+            bodyHtml += '<div class="slot-detail-course">' + escapeHtml(item.courseName || '未命名课程') + '</div>';
+            bodyHtml += '<div class="slot-detail-meta">';
+            bodyHtml += '教师：' + escapeHtml(item.teacherName || '-');
+            bodyHtml += ' | 班级：' + escapeHtml(item.clazzName || '-');
+            bodyHtml += ' | ' + getSourceLabel(item);
+            bodyHtml += '</div>';
+            if (isPending) {
+                bodyHtml += '<div class="slot-detail-link" style="cursor:pointer;color:#007bff;" onclick="' + buildPendingLink(item) + '">查看审批详情 →</div>';
+            }
+            bodyHtml += '</div>';
+        });
+        bodyHtml += '</div>';
+
+        var buildingId = document.getElementById('buildingSelect').value;
+        var allRooms = (buildingRoomsMap[buildingId] || []);
+        var freeRooms = allRooms.filter(function(r) { return !uniqueRoomNumbers.has(r.code); });
+        if (freeRooms.length > 0) {
+            bodyHtml += '<div class="slot-detail-empty-rooms">';
+            bodyHtml += '<h3>空闲教室</h3>';
+            bodyHtml += '<p>' + freeRooms.map(function(r) { return escapeHtml(r.code); }).join('、') + '</p>';
+            bodyHtml += '</div>';
+        }
+
+        document.getElementById('slotDetailBody').innerHTML = bodyHtml;
+    }
+
+    function closeSlotDetailModal() {
+        document.getElementById('slotDetailModal').style.display = 'none';
+    }
+
+    window.onclick = function (event) {
+        if (event.target === document.getElementById('reservationModal')) {
+            closeModal();
+        }
+        if (event.target === document.getElementById('slotDetailModal')) {
+            closeSlotDetailModal();
+        }
+    };
+
+    initFilters();
+</script>
+</body>
+</html>

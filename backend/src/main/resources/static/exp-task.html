@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验教学任务管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background: #fff;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>实验教学任务管理</h1>
+    <div style="margin-bottom: 20px;">
+        <button class="btn" onclick="openAddModal()">新增任务</button>
+        <button class="btn" onclick="exportExpTask()">导出 Word</button>
+    </div>
+    <table id="taskTable">
+        <thead>
+            <tr>
+                <th>学期</th>
+                <th>专业</th>
+                <th>课程名称</th>
+                <th>教师</th>
+                <th>实验学时</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- 详情模态框 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>实验教学任务详情</h2>
+                <span class="close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div id="detailContent" style="padding: 20px;"></div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 申请实验室授课模态框 -->
+    <div id="applyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>申请实验室授课</h2>
+                <span class="close" onclick="closeApplyModal()">&times;</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>上课课程</label>
+                    <input type="text" id="applyCourseName" readonly style="background:#f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label>专业</label>
+                    <input type="text" id="applyMajor" readonly style="background:#f5f5f5;">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>年级</label>
+                    <input type="text" id="applyGrade" readonly style="background:#f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label>班级</label>
+                    <input type="text" id="applyClassName" readonly style="background:#f5f5f5;">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>上课周次 <span style="color:red;">*</span></label>
+                    <input type="text" id="applyTargetWeeks" placeholder="如：1-16">
+                </div>
+                <div class="form-group">
+                    <label>星期 <span style="color:red;">*</span></label>
+                    <select id="applyTargetDayOfWeek">
+                        <option value="">请选择</option>
+                        <option value="1">星期一</option>
+                        <option value="2">星期二</option>
+                        <option value="3">星期三</option>
+                        <option value="4">星期四</option>
+                        <option value="5">星期五</option>
+                        <option value="6">星期六</option>
+                        <option value="7">星期日</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>节次 <span style="color:red;">*</span></label>
+                    <input type="text" id="applyTargetTimeSlot" placeholder="如：1-2">
+                </div>
+                <div class="form-group">
+                    <label>期望实验室</label>
+                    <input type="text" id="applyExpectedLab" placeholder="选填">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>备注</label>
+                <textarea id="applyRemark" rows="3" placeholder="选填" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px;resize:vertical;"></textarea>
+            </div>
+
+            <input type="hidden" id="applyTaskId">
+            <input type="hidden" id="applyTermId">
+
+            <div class="modal-footer">
+                <button class="btn" onclick="closeApplyModal()">取消</button>
+                <button class="btn btn-success" onclick="submitApply()">提交申请</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/编辑模态框 -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增任务</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+
+            <div class="form-group">
+                <label>学期</label>
+                <input type="text" id="modalTerm" placeholder="如：2025 秋季">
+            </div>
+
+            <div class="form-group">
+                <label>专业</label>
+                <input type="text" id="modalMajor" placeholder="请输入专业名称">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>班级 ID</label>
+                    <input type="number" id="modalClassId" placeholder="请输入班级 ID">
+                </div>
+                <div class="form-group">
+                    <label>课程 ID</label>
+                    <input type="number" id="modalCourseId" placeholder="请输入课程 ID">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>课程名称</label>
+                <input type="text" id="modalCourseName" placeholder="请输入课程名称">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>学生人数</label>
+                    <input type="number" id="modalStudentCount" placeholder="请输入学生人数">
+                </div>
+                <div class="form-group">
+                    <label>学生层次</label>
+                    <select id="modalStudentLevel"></select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>课程类别</label>
+                <select id="modalCourseType"></select>
+            </div>
+
+            <div class="form-group">
+                <label>是否独立设课</label>
+                <select id="modalIndependentCourse"></select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实验总学时</label>
+                    <input type="number" id="modalTotalExpHour" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>本学期实验学时</label>
+                    <input type="number" id="modalCurrentExpHour" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实践总学时</label>
+                    <input type="number" id="modalTotalPracticeHour" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>本学期实践学时</label>
+                    <input type="number" id="modalCurrentPracticeHour" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实训总学时</label>
+                    <input type="number" id="modalTotalTrainingHour" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>本学期实训学时</label>
+                    <input type="number" id="modalCurrentTrainingHour" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>开课机构</label>
+                    <input type="text" id="modalOrganization" placeholder="请输入开课机构">
+                </div>
+                <div class="form-group">
+                    <label>开课部门</label>
+                    <input type="text" id="modalDepartment" placeholder="请输入开课部门">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>授课教师</label>
+                    <input type="text" id="modalTeacher" placeholder="请输入教师姓名">
+                </div>
+                <div class="form-group">
+                    <label>教师职称</label>
+                    <input type="text" id="modalTeacherTitle" placeholder="请输入职称">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>技术人员</label>
+                    <input type="text" id="modalTechnician" placeholder="请输入技术人员姓名">
+                </div>
+                <div class="form-group">
+                    <label>技术人员职称</label>
+                    <input type="text" id="modalTechnicianTitle" placeholder="请输入职称">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>教材名称</label>
+                <input type="text" id="modalTextbookName" placeholder="请输入教材名称">
+            </div>
+
+            <div class="form-group">
+                <label>实验指导书名称</label>
+                <input type="text" id="modalGuidebookName" placeholder="请输入实验指导书名称">
+            </div>
+
+            <input type="hidden" id="modalTaskId">
+
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="saveTask()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+<script>
+        console.log('exp-task.html loaded');
+
+        window.onload = function () {
+            loadAllDictionaries().then(() => {
+                renderDictSelectOptions('modalStudentLevel', 'student_level', [{ value: '', text: '请选择' }]);
+                renderDictSelectOptions('modalCourseType', 'course_category', [{ value: '', text: '请选择' }]);
+                renderDictSelectOptions('modalIndependentCourse', 'yes_no', [{ value: '', text: '请选择' }]);
+            });
+            console.log('Page loaded, fetching data...');
+            fetch('/api/exp-task')
+                .then(res => res.json())
+                .then(data => {
+                    console.log('Data received:', data);
+                    const tbody = document.querySelector('#taskTable tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(task => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${task.term || ''}</td>
+                            <td>${task.major || ''}</td>
+                            <td>${task.courseName || ''}</td>
+                            <td>${task.teacher || ''}</td>
+                            <td>${task.currentExpHour || ''}</td>
+                            <td>
+                                <button class="btn" onclick="viewDetail(${task.id})">详情</button>
+                                <button class="btn" onclick="editTask(${task.id})">编辑</button>
+                                <button class="btn btn-success" onclick="openApplyModal(${task.id})">申请实验室授课</button>
+                                <button class="btn btn-danger" onclick="deleteTask(${task.id})">删除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching data:', err);
+                    alert('加载数据失败：' + err.message);
+                });
+        };
+
+        function openModal(isEdit = false) {
+            document.getElementById('taskModal').style.display = 'block';
+            document.getElementById('modalTitle').textContent = isEdit ? '编辑任务' : '新增任务';
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').style.display = 'none';
+            clearModal();
+        }
+
+        function clearModal() {
+            document.getElementById('modalTaskId').value = '';
+            document.getElementById('modalTerm').value = '';
+            document.getElementById('modalMajor').value = '';
+            document.getElementById('modalClassId').value = '';
+            document.getElementById('modalCourseId').value = '';
+            document.getElementById('modalCourseName').value = '';
+            document.getElementById('modalStudentCount').value = '';
+            document.getElementById('modalStudentLevel').value = '';
+            document.getElementById('modalCourseType').value = '';
+            document.getElementById('modalIndependentCourse').value = '';
+            document.getElementById('modalTotalExpHour').value = '';
+            document.getElementById('modalCurrentExpHour').value = '';
+            document.getElementById('modalTotalPracticeHour').value = '';
+            document.getElementById('modalCurrentPracticeHour').value = '';
+            document.getElementById('modalTotalTrainingHour').value = '';
+            document.getElementById('modalCurrentTrainingHour').value = '';
+            document.getElementById('modalOrganization').value = '';
+            document.getElementById('modalDepartment').value = '';
+            document.getElementById('modalTeacher').value = '';
+            document.getElementById('modalTeacherTitle').value = '';
+            document.getElementById('modalTechnician').value = '';
+            document.getElementById('modalTechnicianTitle').value = '';
+            document.getElementById('modalTextbookName').value = '';
+            document.getElementById('modalGuidebookName').value = '';
+        }
+
+        function openAddModal() {
+            openModal(false);
+        }
+
+        function editTask(id) {
+            fetch(`/api/exp-task/${id}`)
+                .then(res => res.json())
+                .then(task => {
+                    openModal(true);
+                    // 先清空模态框，避免残留数据
+                    clearModal();
+                    // 再填充数据
+                    document.getElementById('modalTaskId').value = task.id;
+                    document.getElementById('modalTerm').value = task.term || '';
+                    document.getElementById('modalMajor').value = task.major || '';
+                    document.getElementById('modalClassId').value = task.classId || '';
+                    document.getElementById('modalCourseId').value = task.courseId || '';
+                    document.getElementById('modalCourseName').value = task.courseName || '';
+                    document.getElementById('modalStudentCount').value = task.studentCount || '';
+                    document.getElementById('modalStudentLevel').value = task.studentLevel || '';
+                    document.getElementById('modalCourseType').value = task.courseType || '';
+                    document.getElementById('modalIndependentCourse').value = task.independentCourse != null ? task.independentCourse.toString() : '';
+                    document.getElementById('modalTotalExpHour').value = task.totalExpHour || '';
+                    document.getElementById('modalCurrentExpHour').value = task.currentExpHour || '';
+                    document.getElementById('modalTotalPracticeHour').value = task.totalPracticeHour || '';
+                    document.getElementById('modalCurrentPracticeHour').value = task.currentPracticeHour || '';
+                    document.getElementById('modalTotalTrainingHour').value = task.totalTrainingHour || '';
+                    document.getElementById('modalCurrentTrainingHour').value = task.currentTrainingHour || '';
+                    document.getElementById('modalOrganization').value = task.organization || '';
+                    document.getElementById('modalDepartment').value = task.department || '';
+                    document.getElementById('modalTeacher').value = task.teacher || '';
+                    document.getElementById('modalTeacherTitle').value = task.teacherTitle || '';
+                    document.getElementById('modalTechnician').value = task.technician || '';
+                    document.getElementById('modalTechnicianTitle').value = task.technicianTitle || '';
+                    document.getElementById('modalTextbookName').value = task.textbookName || '';
+                    document.getElementById('modalGuidebookName').value = task.guidebookName || '';
+
+                    // 滚动到顶部
+                    document.querySelector('.modal-content').scrollTop = 0;
+                })
+                .catch(err => {
+                    alert('获取任务信息失败：' + err.message);
+                });
+        }
+
+        function viewDetail(id) {
+            fetch(`/api/exp-task/${id}`)
+                .then(res => res.json())
+                .then(task => {
+                    const detailContent = document.getElementById('detailContent');
+                    detailContent.innerHTML = `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>学期</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.term || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>专业</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.major || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>学生人数</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.studentCount || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>学生层次</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.studentLevel || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>课程名称</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.courseName || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>课程类别</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.courseType || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>是否独立设课</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.independentCourse != null ? (task.independentCourse ? '是' : '否') : '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实验总学时</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.totalExpHour || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>本学期实验学时</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.currentExpHour || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实践总学时</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.totalPracticeHour || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>本学期实践学时</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.currentPracticeHour || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实训总学时</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.totalTrainingHour || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>本学期实训学时</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.currentTrainingHour || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>开课机构</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.organization || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>开课部门</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.department || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>授课教师</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.teacher || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>教师职称</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.teacherTitle || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>技术人员</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.technician || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>技术人员职称</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.technicianTitle || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>教材名称</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.textbookName || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实验指导书名称</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${task.guidebookName || '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').style.display = 'block';
+                })
+                .catch(err => {
+                    alert('获取任务详情失败：' + err.message);
+                });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function saveTask() {
+            const id = document.getElementById('modalTaskId').value;
+            const task = {
+                term: document.getElementById('modalTerm').value,
+                major: document.getElementById('modalMajor').value,
+                classId: document.getElementById('modalClassId').value ? parseInt(document.getElementById('modalClassId').value) : null,
+                courseId: document.getElementById('modalCourseId').value ? parseInt(document.getElementById('modalCourseId').value) : null,
+                courseName: document.getElementById('modalCourseName').value,
+                studentCount: document.getElementById('modalStudentCount').value ? parseInt(document.getElementById('modalStudentCount').value) : null,
+                studentLevel: document.getElementById('modalStudentLevel').value,
+                courseType: document.getElementById('modalCourseType').value,
+                independentCourse: document.getElementById('modalIndependentCourse').value ? document.getElementById('modalIndependentCourse').value === 'true' : null,
+                totalExpHour: document.getElementById('modalTotalExpHour').value ? parseInt(document.getElementById('modalTotalExpHour').value) : null,
+                currentExpHour: document.getElementById('modalCurrentExpHour').value ? parseInt(document.getElementById('modalCurrentExpHour').value) : null,
+                totalPracticeHour: document.getElementById('modalTotalPracticeHour').value ? parseInt(document.getElementById('modalTotalPracticeHour').value) : null,
+                currentPracticeHour: document.getElementById('modalCurrentPracticeHour').value ? parseInt(document.getElementById('modalCurrentPracticeHour').value) : null,
+                totalTrainingHour: document.getElementById('modalTotalTrainingHour').value ? parseInt(document.getElementById('modalTotalTrainingHour').value) : null,
+                currentTrainingHour: document.getElementById('modalCurrentTrainingHour').value ? parseInt(document.getElementById('modalCurrentTrainingHour').value) : null,
+                organization: document.getElementById('modalOrganization').value,
+                department: document.getElementById('modalDepartment').value,
+                teacher: document.getElementById('modalTeacher').value,
+                teacherTitle: document.getElementById('modalTeacherTitle').value,
+                technician: document.getElementById('modalTechnician').value,
+                technicianTitle: document.getElementById('modalTechnicianTitle').value,
+                textbookName: document.getElementById('modalTextbookName').value,
+                guidebookName: document.getElementById('modalGuidebookName').value
+            };
+
+            if (!task.term) {
+                alert('请填写学期！');
+                return;
+            }
+
+            const url = id ? `/api/exp-task/${id}` : '/api/exp-task';
+            const method = id ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(task)
+            }).then(() => {
+                alert(id ? '更新成功！' : '新增成功！');
+                window.location.reload();
+            }).catch(err => {
+                alert(id ? '更新失败：' + err.message : '新增失败：' + err.message);
+            });
+        }
+
+        function deleteTask(id) {
+            if (confirm('确定要删除吗？')) {
+                fetch(`/api/exp-task/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        alert('删除成功！');
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        alert('删除失败：' + err.message);
+                    });
+            }
+        }
+
+        window.onclick = function (event) {
+            const taskModal = document.getElementById('taskModal');
+            const detailModal = document.getElementById('detailModal');
+            const applyModal = document.getElementById('applyModal');
+            if (event.target === taskModal) {
+                closeModal();
+            }
+            if (event.target === detailModal) {
+                closeDetailModal();
+            }
+            if (event.target === applyModal) {
+                closeApplyModal();
+            }
+        }
+
+        function exportExpTask() {
+            window.location.href = "/export/exp-task";
+        }
+
+        function getApplyTermErrorMessage() {
+            return '该任务学期信息异常，请联系管理员核对';
+        }
+
+        function openApplyModal(id) {
+            fetch(`/api/exp-task/${id}`)
+                .then(res => res.json())
+                .then(task => {
+                    document.getElementById('applyTaskId').value = task.id;
+                    document.getElementById('applyTermId').value = task.termId || '';
+                    document.getElementById('applyCourseName').value = task.courseName || '';
+                    document.getElementById('applyMajor').value = task.major || '';
+                    document.getElementById('applyGrade').value = task.grade || '';
+                    document.getElementById('applyClassName').value = task.className || '';
+                    // 清空表单
+                    document.getElementById('applyTargetWeeks').value = '';
+                    document.getElementById('applyTargetDayOfWeek').value = '';
+                    document.getElementById('applyTargetTimeSlot').value = '';
+                    document.getElementById('applyExpectedLab').value = '';
+                    document.getElementById('applyRemark').value = '';
+                    document.getElementById('applyModal').style.display = 'block';
+                })
+                .catch(err => {
+                    alert('获取任务信息失败：' + err.message);
+                });
+        }
+
+        function closeApplyModal() {
+            document.getElementById('applyModal').style.display = 'none';
+        }
+
+        function readErrorMessage(response, fallbackMessage) {
+            return response.text().then(text => {
+                if (!text) return fallbackMessage;
+                try {
+                    const data = JSON.parse(text);
+                    return data.message || fallbackMessage;
+                } catch (e) {
+                    return text || fallbackMessage;
+                }
+            });
+        }
+
+        function submitApply() {
+            const taskId = document.getElementById('applyTaskId').value;
+            if (!taskId) { alert('无法获取教学任务ID'); return; }
+
+            const termIdValue = document.getElementById('applyTermId').value;
+            if (!termIdValue) { alert(getApplyTermErrorMessage()); return; }
+            const termId = parseInt(termIdValue);
+            if (isNaN(termId)) { alert(getApplyTermErrorMessage()); return; }
+
+            const targetWeeks = document.getElementById('applyTargetWeeks').value.trim();
+            const targetDayOfWeek = document.getElementById('applyTargetDayOfWeek').value;
+            const targetTimeSlot = document.getElementById('applyTargetTimeSlot').value.trim();
+
+            if (!targetWeeks) { alert('请填写上课周次'); return; }
+            if (!targetDayOfWeek) { alert('请选择星期'); return; }
+            if (!targetTimeSlot) { alert('请填写节次'); return; }
+
+            const dto = {
+                applicationType: 'TEACHING',
+                teachingTaskId: parseInt(taskId),
+                termId: termId,
+                projectName: document.getElementById('applyCourseName').value,
+                grade: document.getElementById('applyGrade').value,
+                className: document.getElementById('applyClassName').value,
+                targetWeeks: targetWeeks,
+                targetDayOfWeek: parseInt(targetDayOfWeek),
+                targetTimeSlot: targetTimeSlot,
+                expectedLab: document.getElementById('applyExpectedLab').value.trim(),
+                remark: document.getElementById('applyRemark').value.trim()
+            };
+
+            const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+            fetch('/api/schedule-applications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(dto)
+            })
+            .then(async res => {
+                if (!res.ok) {
+                    throw new Error(await readErrorMessage(res, '提交失败'));
+                }
+                return res.json();
+            })
+            .then(() => {
+                alert('申请提交成功！');
+                closeApplyModal();
+            })
+            .catch(err => {
+                alert('提交失败：' + err.message);
+            });
+        }
+    </script>
+</body>
+
+</html>

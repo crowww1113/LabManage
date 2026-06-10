@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>排课数据统计</title>
+    <script src="api-fetch.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: #f7f8fa;
+            color: #333;
+        }
+        h1 {
+            margin: 0 0 16px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 0;
+            flex-wrap: wrap;
+        }
+        .toolbar label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+        }
+        .toolbar select {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fff;
+            color: #333;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-top: 16px;
+            margin-bottom: 0;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 11px 20px;
+            cursor: pointer;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-size: 14px;
+            color: #555;
+            background: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tab:hover {
+            color: #1677ff;
+            background: #f0f5ff;
+        }
+        .tab.active {
+            border-bottom-color: #1677ff;
+            color: #1677ff;
+            font-weight: 600;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 16px 0 12px;
+        }
+        .header-bar .title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .btn-export {
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 8px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            background: #28a745;
+            transition: background 0.2s;
+        }
+        .btn-export:hover {
+            background: #218838;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .summary {
+            margin-bottom: 12px;
+            color: #888;
+            font-size: 13px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+        th, td {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #555;
+            position: sticky;
+            top: 0;
+        }
+        tbody tr:hover {
+            background: #fafcff;
+        }
+        .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .rate {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .rate-high { background: #f6ffed; color: #389e0d; }
+        .rate-mid  { background: #fff7e6; color: #d48806; }
+        .rate-low  { background: #fff1f0; color: #cf1322; }
+        .empty {
+            text-align: center;
+            color: #bbb;
+            padding: 48px 16px;
+            font-size: 15px;
+        }
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 32px;
+        }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .tab { padding: 9px 12px; font-size: 13px; }
+            th, td { padding: 8px 6px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>排课数据统计</h1>
+
+<div class="toolbar">
+    <label>学期：</label>
+    <select id="termSelect" onchange="onTermChange()"><option value="">加载中...</option></select>
+</div>
+
+<div class="tabs" id="tabBar"></div>
+
+<div class="header-bar">
+    <span class="title" id="panelTitle">楼宇周次使用率</span>
+    <button class="btn-export" id="exportBtn" onclick="doExport()">导出 Excel</button>
+</div>
+
+<div class="card">
+    <div class="summary" id="summaryText">请选择学期后查看数据</div>
+    <div id="tableWrapper"></div>
+</div>
+
+<script>
+/* ========== 报表配置 ========== */
+const REPORTS = [
+    {
+        key: 'room-weekly',
+        label: '楼宇周次使用率',
+        title: '楼宇周次使用率统计',
+        url: '/api/stats/room-weekly',
+        exportUrl: '/api/stats/room-weekly/export',
+        headers: ['楼宇', '房间', '周次', '总槽位', '已预约', '空闲', '使用率(%)'],
+        fields: ['buildingName','roomNumber','weekNo','totalSlots','reservedSlots','freeSlots','usageRate'],
+        nums: [3,4,5],
+        rateCol: 6
+    },
+    {
+        key: 'headcount',
+        label: '人数统计',
+        title: '楼宇/房间人数统计',
+        url: '/api/stats/headcount',
+        exportUrl: '/api/stats/headcount/export',
+        headers: ['楼宇', '房间', '预计人数', '实到人数'],
+        fields: ['buildingName','roomNumber','expectedTotal','actualTotal'],
+        nums: [2,3]
+    },
+    {
+        key: 'major',
+        label: '专业课时',
+        title: '专业维度课时统计',
+        url: '/api/stats/major',
+        exportUrl: '/api/stats/major/export',
+        headers: ['专业', '课时数'],
+        fields: ['majorName','courseHours'],
+        nums: [1]
+    },
+    {
+        key: 'class',
+        label: '班级课时',
+        title: '班级维度课时统计',
+        url: '/api/stats/class',
+        exportUrl: '/api/stats/class/export',
+        headers: ['班级ID', '班级名称', '课时数'],
+        fields: ['clazzId','className','courseHours'],
+        nums: [0,2]
+    },
+    {
+        key: 'grade',
+        label: '年级课时',
+        title: '年级维度课时统计',
+        url: '/api/stats/grade',
+        exportUrl: '/api/stats/grade/export',
+        headers: ['年级', '课时数'],
+        fields: ['grade','courseHours'],
+        nums: [1]
+    },
+    {
+        key: 'course',
+        label: '课程课时',
+        title: '课程维度课时统计',
+        url: '/api/stats/course',
+        exportUrl: '/api/stats/course/export',
+        headers: ['课程ID', '课程名称', '课时数'],
+        fields: ['courseId','courseName','courseHours'],
+        nums: [0,2]
+    },
+    {
+        key: 'reservation',
+        label: '预约类别',
+        title: '项目类别预约统计',
+        url: '/api/stats/reservation',
+        exportUrl: '/api/stats/reservation/export',
+        headers: ['项目类别', '预约次数', '总时长'],
+        fields: ['projectCategory','reservationCount','totalDuration'],
+        nums: [1,2]
+    },
+    {
+        key: 'registration-rate',
+        label: '登记率',
+        title: '登记完成率统计',
+        url: '/api/stats/registration-rate',
+        exportUrl: '/api/stats/registration-rate/export',
+        headers: ['教师ID', '教师姓名', '应登记数', '已登记数', '登记率(%)'],
+        fields: ['teacherId','teacherName','expectedCount','registeredCount','registrationRate'],
+        nums: [0,2,3],
+        rateCol: 4
+    }
+];
+
+let currentReport = REPORTS[0];
+let currentTermId = null;
+
+/* ========== 初始化 ========== */
+(async function init() {
+    renderTabs();
+    await loadTerms();
+})();
+
+function renderTabs() {
+    const bar = document.getElementById('tabBar');
+    bar.innerHTML = REPORTS.map((r, i) =>
+        `<button class="tab${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="switchTab(${i}, this)">${r.label}</button>`
+    ).join('');
+}
+
+async function loadTerms() {
+    try {
+        const terms = await apiFetch('/api/terms');
+        const sel = document.getElementById('termSelect');
+        sel.innerHTML = '<option value="">-- 请选择学期 --</option>';
+        (terms || []).forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.termName;
+            sel.appendChild(opt);
+        });
+        // 默认选中最后一个（最新学期）
+        if (terms && terms.length > 0) {
+            sel.value = terms[terms.length - 1].id;
+            onTermChange();
+        }
+    } catch (e) {
+        document.getElementById('termSelect').innerHTML = '<option value="">加载失败</option>';
+    }
+}
+
+/* ========== 切换 ========== */
+function switchTab(idx, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentReport = REPORTS[idx];
+    document.getElementById('panelTitle').textContent = currentReport.title;
+    loadData();
+}
+
+function onTermChange() {
+    const v = document.getElementById('termSelect').value;
+    currentTermId = v ? Number(v) : null;
+    loadData();
+}
+
+/* ========== 加载数据 ========== */
+async function loadData() {
+    if (!currentTermId) {
+        document.getElementById('summaryText').textContent = '请选择学期后查看数据';
+        document.getElementById('tableWrapper').innerHTML = '';
+        return;
+    }
+    document.getElementById('summaryText').textContent = '加载中...';
+    document.getElementById('tableWrapper').innerHTML = '<div class="loading">加载中...</div>';
+
+    try {
+        const data = await apiFetch(`${currentReport.url}?termId=${currentTermId}`);
+        renderTable(data || []);
+    } catch (e) {
+        document.getElementById('summaryText').textContent = '';
+        document.getElementById('tableWrapper').innerHTML = `<div class="empty">加载失败：${e.message}</div>`;
+    }
+}
+
+/* ========== 渲染表格 ========== */
+function renderTable(list) {
+    const rpt = currentReport;
+    document.getElementById('summaryText').textContent = `共 ${list.length} 条记录`;
+
+    if (list.length === 0) {
+        document.getElementById('tableWrapper').innerHTML = '<div class="empty">暂无数据</div>';
+        return;
+    }
+
+    let html = '<table><thead><tr>';
+    rpt.headers.forEach((h, i) => {
+        const cls = i === rpt.rateCol || (rpt.nums && rpt.nums.includes(i)) ? ' class="num"' : '';
+        html += `<th${cls}>${h}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    list.forEach(row => {
+        html += '<tr>';
+        rpt.fields.forEach((f, i) => {
+            let val = row[f];
+            if (val === null || val === undefined) val = '';
+
+            // 使用率列：带颜色标签
+            if (rpt.rateCol === i) {
+                const n = Number(val);
+                const cls = n >= 80 ? 'rate-low' : n >= 50 ? 'rate-mid' : 'rate-high';
+                html += `<td class="num"><span class="rate ${cls}">${n}%</span></td>`;
+                return;
+            }
+
+            // 数字列右对齐
+            if (rpt.nums && rpt.nums.includes(i)) {
+                html += `<td class="num">${val}</td>`;
+                return;
+            }
+
+            html += `<td>${escapeHtml(String(val))}</td>`;
+        });
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('tableWrapper').innerHTML = html;
+}
+
+/* ========== 导出 ========== */
+function doExport() {
+    if (!currentTermId) {
+        alert('请先选择学期');
+        return;
+    }
+    window.location.href = `${currentReport.exportUrl}?termId=${currentTermId}`;
+}
+
+/* ========== 工具 ========== */
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+</script>
+</body>
+</html>

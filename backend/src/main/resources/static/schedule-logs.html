@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>排课操作日志</title>
+    <script src="api-fetch.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; padding: 20px; background: #fff; color: #333; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+        label { font-weight: 600; }
+        select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        .btn { padding: 9px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: #fff; font-size: 14px; }
+        .btn:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; vertical-align: top; }
+        th { background: #f5f5f5; white-space: nowrap; }
+        tr:hover { background: #fafafa; }
+        .empty { padding: 24px; text-align: center; color: #666; border: 1px dashed #ddd; border-radius: 4px; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-create { background: #d4edda; color: #155724; }
+        .tag-update { background: #cce5ff; color: #004085; }
+        .tag-approve { background: #d4edda; color: #155724; }
+        .tag-reject { background: #f8d7da; color: #721c24; }
+        .tag-cancel { background: #e2e3e5; color: #383d41; }
+        .tag-delete { background: #f8d7da; color: #721c24; }
+        .tag-system { background: #fff3cd; color: #856404; }
+        .info-bar { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 16px; font-size: 14px; }
+        .info-bar span { margin-right: 24px; }
+    </style>
+</head>
+<body>
+<h1>排课操作日志</h1>
+
+<div class="toolbar">
+    <div class="form-group">
+        <label>业务类型</label>
+        <select id="filterBizType" onchange="loadLogs()">
+            <option value="">全部</option>
+            <option value="RESERVATION">集中排课</option>
+            <option value="APPLICATION">排课申请</option>
+            <option value="USAGE_RECORD">使用记录</option>
+        </select>
+    </div>
+    <button class="btn" onclick="loadLogs()">刷新</button>
+</div>
+
+<div class="info-bar" id="statsBar" style="display:none;">
+    <span>总记录数：<strong id="statTotal">0</strong></span>
+</div>
+
+<div id="tableWrapper"></div>
+
+<script>
+    function bizTypeText(type) {
+        const map = {
+            RESERVATION: '集中排课', APPLICATION: '排课申请',
+            USAGE_RECORD: '使用记录', NOTICE: '通知消息'
+        };
+        return map[type] || type || '-';
+    }
+
+    function operationTag(opType) {
+        const map = {
+            CREATE: 'tag-create', UPDATE: 'tag-update',
+            APPROVE: 'tag-approve', REJECT: 'tag-reject',
+            CANCEL: 'tag-cancel', DELETE: 'tag-delete',
+            SUBMIT: 'tag-create', WITHDRAW: 'tag-cancel',
+            START_USE: 'tag-update', COMPLETE: 'tag-approve'
+        };
+        return map[opType] || 'tag-system';
+    }
+
+    function operationText(opType) {
+        const map = {
+            CREATE: '创建', UPDATE: '修改', APPROVE: '审批通过',
+            REJECT: '驳回', CANCEL: '取消', DELETE: '删除',
+            SUBMIT: '提交', WITHDRAW: '撤回',
+            START_USE: '开始使用', COMPLETE: '完成'
+        };
+        return map[opType] || opType || '-';
+    }
+
+    function formatTime(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function renderTable(list) {
+        const wrapper = document.getElementById('tableWrapper');
+        if (!Array.isArray(list) || list.length === 0) {
+            wrapper.innerHTML = '<div class="empty">暂无操作日志</div>';
+            document.getElementById('statsBar').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('statsBar').style.display = 'block';
+        document.getElementById('statTotal').textContent = list.length;
+
+        wrapper.innerHTML = `
+            <table>
+                <thead><tr>
+                    <th>ID</th><th>业务类型</th><th>业务ID</th><th>操作类型</th>
+                    <th>操作人ID</th><th>角色</th><th>状态变更</th>
+                    <th>操作内容</th><th>操作结果</th><th>操作时间</th>
+                </tr></thead>
+                <tbody>${list.map(item => `
+                    <tr>
+                        <td>${item.id ?? '-'}</td>
+                        <td>${bizTypeText(item.bizType)}</td>
+                        <td>${item.bizId ?? '-'}</td>
+                        <td><span class="tag ${operationTag(item.operationType)}">${operationText(item.operationType)}</span></td>
+                        <td>${item.operatorId ?? '-'}</td>
+                        <td>${item.operatorRoleCode || '-'}</td>
+                        <td>${item.beforeStatus ? (item.beforeStatus + ' → ') : ''}${item.afterStatus || '-'}</td>
+                        <td title="${item.operationContent || ''}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.operationContent || '-'}</td>
+                        <td>${item.operationResult || '-'}</td>
+                        <td style="white-space:nowrap;">${formatTime(item.createdAt)}</td>
+                    </tr>
+                `).join('')}</tbody>
+            </table>`;
+    }
+
+    async function loadLogs() {
+        try {
+            const params = new URLSearchParams();
+            const bizType = document.getElementById('filterBizType').value;
+            if (bizType) params.set('bizType', bizType);
+            const query = params.toString() ? `?${params.toString()}` : '';
+            const list = await apiFetch(`/api/schedule-operation-logs${query}`);
+            renderTable(list);
+        } catch (error) {
+            alert('加载操作日志失败：' + error.message);
+        }
+    }
+
+    // 初始化
+    loadLogs();
+</script>
+</body>
+</html>

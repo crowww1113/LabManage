@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>排课数据大屏</title>
+    <script src="api-fetch.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-from: #f8f6f2;
+            --bg-to: #f1eee8;
+            --panel: rgba(255, 255, 255, 0.85);
+            --panel-hover: rgba(255, 255, 255, 0.92);
+            --border: rgba(37, 32, 27, 0.08);
+            --ink: #181816;
+            --muted: #6f6a62;
+            --accent: #16a34a;
+            --green: #16a34a;
+            --red: #dc2626;
+            --orange: #f97316;
+            --radius: 20px;
+            --shadow: 0 2px 12px rgba(37,32,27,0.06);
+            --shadow-hover: 0 8px 24px rgba(37,32,27,0.12);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Inter, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
+            color: var(--ink);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ---- 顶部栏 ---- */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            background: var(--panel);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .top-bar h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--ink);
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            padding: 7px 18px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .mode-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+        .date-input {
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--ink);
+            font-size: 13px;
+        }
+        .date-label {
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .btn-screenshot {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            background: #181816;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-screenshot:hover { opacity: 0.85; }
+
+        /* ---- 网格布局 ---- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 16px;
+            padding: 16px 24px;
+            height: calc(100vh - 62px);
+            /* 关键：grid 必须有明确高度，且子项 stretch */
+            align-items: stretch;
+        }
+        @media (max-width: 1200px) {
+            .grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; height: auto; }
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .grid > * { min-height: 0; }  /* 关键：允许 grid 子项收缩 */
+
+        /* ---- 面板 ---- */
+        .panel {
+            background: var(--panel);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+        .panel:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            background: var(--panel-hover);
+        }
+        .panel-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px 8px;
+            height: 48px;
+            border-bottom: 1px solid var(--border);
+            box-sizing: border-box;
+        }
+        .panel-head .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .panel-head h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--ink);
+        }
+        .panel-body {
+            flex: 1;
+            padding: 10px 16px 16px;
+            box-sizing: border-box;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* ---- ① 实时占用 ---- */
+        .occupancy-summary {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .occ-card {
+            flex: 1;
+            text-align: center;
+            padding: 10px 6px;
+            background: rgba(37,32,27,0.04);
+            border-radius: 12px;
+        }
+        .occ-card .num {
+            font-size: 28px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .occ-card .lbl {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        .occ-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: calc(100% - 90px);
+            overflow-y: auto;
+        }
+        .occ-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .occ-chip.free {
+            background: rgba(22,163,74,0.08);
+            color: var(--green);
+            border: 1px solid rgba(22,163,74,0.2);
+        }
+        .occ-chip.occupied {
+            background: rgba(220,38,38,0.08);
+            color: var(--red);
+            border: 1px solid rgba(220,38,38,0.2);
+        }
+
+        /* ---- ⑥ 异常提醒 ---- */
+        .alert-list {
+            list-style: none;
+        }
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .alert-item.overdue {
+            background: rgba(220,38,38,0.06);
+            border-left: 3px solid var(--red);
+        }
+        .alert-item.equip {
+            background: rgba(249,115,22,0.06);
+            border-left: 3px solid var(--orange);
+        }
+        .alert-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .alert-tag.t-overdue { background: var(--red); color: #fff; }
+        .alert-tag.t-equip { background: var(--orange); color: #fff; }
+        .alert-text { color: var(--muted); }
+        .alert-text b { color: var(--ink); font-weight: 600; }
+        .no-alert {
+            text-align: center;
+            color: var(--muted);
+            padding: 24px;
+            font-size: 13px;
+        }
+
+        /* ---- 图表容器 ---- */
+        .chart-box { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+
+<!-- ===== 顶部栏 ===== -->
+<div class="top-bar">
+    <h1>排课数据大屏</h1>
+    <div class="controls">
+        <button class="mode-btn active" data-mode="DAILY" onclick="switchMode('DAILY',this)">日常监控</button>
+        <button class="mode-btn" data-mode="STAGE" onclick="switchMode('STAGE',this)">阶段统计</button>
+        <span class="date-label" id="dateLabel" style="display:none">起止日期：</span>
+        <input type="date" class="date-input" id="startDate" style="display:none" onchange="loadDashboard()">
+        <input type="date" class="date-input" id="endDate" style="display:none" onchange="loadDashboard()">
+        <button class="btn-screenshot" onclick="takeScreenshot()">导出大屏截图</button>
+    </div>
+</div>
+
+<!-- ===== 六宫格 ===== -->
+<div class="grid">
+    <!-- ① 实时占用 -->
+    <div class="panel" id="panel-occupancy">
+        <div class="panel-head"><span class="dot"></span><h2>实时占用状态</h2></div>
+        <div class="panel-body" id="body-occupancy"></div>
+    </div>
+    <!-- ② 排课密度 -->
+    <div class="panel">
+        <div class="panel-head"><span class="dot"></span><h2>排课密度热力图</h2></div>
+        <div class="panel-body"><div class="chart-box" id="chart-density"></div></div>
+    </div>
+    <!-- ③ 使用率趋势 -->
+    <div class="panel">
+        <div class="panel-head"><span class="dot"></span><h2>使用率趋势</h2></div>
+        <div class="panel-body"><div class="chart-box" id="chart-trend"></div></div>
+    </div>
+    <!-- ④ 分类占比 -->
+    <div class="panel">
+        <div class="panel-head"><span class="dot"></span><h2>分类占比</h2></div>
+        <div class="panel-body"><div class="chart-box" id="chart-proportion"></div></div>
+    </div>
+    <!-- ⑤ 登记完成率 -->
+    <div class="panel">
+        <div class="panel-head"><span class="dot"></span><h2>登记完成率</h2></div>
+        <div class="panel-body"><div class="chart-box" id="chart-registration"></div></div>
+    </div>
+    <!-- ⑥ 异常提醒 -->
+    <div class="panel">
+        <div class="panel-head"><span class="dot" style="background:var(--red)"></span><h2>异常提醒</h2></div>
+        <div class="panel-body" id="body-alerts"></div>
+    </div>
+</div>
+
+<script>
+/* ========== 状态 ========== */
+let mode = 'DAILY';
+let currentTermId = null;
+let _latestData = null;  // 全局存储最新数据，不依赖闭包
+const _charts = {};       // chart 实例缓存
+
+/* 初始化或获取图表实例 */
+function ensureChart(id) {
+    if (_charts[id] && !_charts[id].isDisposed()) return _charts[id];
+    _charts[id] = echarts.init(document.getElementById(id));
+    return _charts[id];
+}
+
+/* 安全渲染单个图表 */
+function safeRender(id, optionFn) {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (w === 0 || h === 0) { console.log('[dashboard] safeRender', id, 'SKIP w='+w, 'h='+h); return false; }
+    console.log('[dashboard] safeRender', id, 'OK w='+w, 'h='+h);
+    const chart = ensureChart(id);
+    const opt = optionFn();
+    if (opt) chart.setOption(opt, true);
+    return true;
+}
+
+/* 渲染全部 4 个图表，返回还有哪些没渲染成功 */
+let _gridObserver = null;
+
+function renderAllCharts() {
+    if (!_latestData) return;
+    const d = _latestData;
+
+    // 首次：挂 grid observer
+    if (!_gridObserver) {
+        const grid = document.querySelector('.grid');
+        if (grid) {
+            _gridObserver = new ResizeObserver(() => {
+                // grid 有真实高度时，用 JS 直接撑开图表容器
+                if (grid.clientHeight > 100) {
+                    const rowH = (grid.clientHeight - 16) / 2;
+                    const chartH = Math.max(rowH - 48 - 26, 100);
+                    document.querySelectorAll('.chart-box').forEach(el => el.style.height = chartH + 'px');
+                }
+                if (_latestData) renderAllCharts();
+            });
+            _gridObserver.observe(grid);
+        }
+    }
+
+    let allDone = true;
+    if (!safeRender('chart-density', () => buildDensityOpt(d.density))) allDone = false;
+    if (!safeRender('chart-trend', () => buildTrendOpt(d.trend))) allDone = false;
+    if (!safeRender('chart-proportion', () => buildProportionOpt(d.proportion))) allDone = false;
+    if (!safeRender('chart-registration', () => buildRegistrationOpt(d.registration))) allDone = false;
+
+    if (allDone && _gridObserver) {
+        _gridObserver.disconnect();
+        _gridObserver = null;
+    }
+}
+
+/* ========== ECharts Option 构建（纯函数，不依赖闭包） ========== */
+const ACCENT = '#16a34a';
+const EMPTY_OPT = { title:{text:'暂无数据',left:'center',top:'center',textStyle:{color:'#6f6a62',fontSize:14}} };
+
+function buildDensityOpt(mod) {
+    if (!mod || !mod.buildings || mod.buildings.length === 0) return EMPTY_OPT;
+    const dateSet = new Set(), buildMap = {};
+    mod.buildings.forEach(b => {
+        buildMap[b.buildingName] = {};
+        (b.dates||[]).forEach(d => { dateSet.add(d.date); buildMap[b.buildingName][d.date] = d.count; });
+    });
+    const dates = [...dateSet].sort(), buildings = Object.keys(buildMap);
+    const data = []; let maxVal = 0;
+    buildings.forEach((b, yi) => dates.forEach((d, xi) => {
+        const v = buildMap[b][d] || 0; data.push([xi, yi, v]); if (v > maxVal) maxVal = v;
+    }));
+    return {
+        tooltip: { formatter: p => `${buildings[p.data[1]]}<br/>${dates[p.data[0]]}<br/>预约数: <b>${p.data[2]}</b>` },
+        grid: { top: 10, right: 10, bottom: 60, left: 80 },
+        xAxis: { type:'category', data: dates, axisLabel:{color:'#6f6a62',fontSize:10,rotate:45}, splitArea:{show:true} },
+        yAxis: { type:'category', data: buildings, axisLabel:{color:'#6f6a62',fontSize:11} },
+        visualMap: { min:0, max:Math.max(maxVal,1), calculable:true, orient:'horizontal', left:'center', bottom:6,
+                     inRange:{color:['#f0fdf4','#86efac','#22c55e','#16a34a','#15803d']}, textStyle:{color:'#6f6a62'} },
+        series: [{ type:'heatmap', data, label:{show:false}, emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,0.5)'}} }]
+    };
+}
+
+function buildTrendOpt(mod) {
+    if (!mod || !mod.weeks || mod.weeks.length === 0) return EMPTY_OPT;
+    const weeks = mod.weeks;
+    return {
+        tooltip: { trigger:'axis', formatter: ps => `第${ps[0].name}周<br/>使用率: <b>${ps[0].data}%</b><br/>已用: ${weeks[ps[0].dataIndex].reservedSlots}/${weeks[ps[0].dataIndex].totalSlots}` },
+        grid: { top: 20, right: 20, bottom: 30, left: 50 },
+        xAxis: { type:'category', data: weeks.map(w=>'第'+w.weekNo+'周'), axisLabel:{color:'#6f6a62',fontSize:10} },
+        yAxis: { type:'value', max:100, axisLabel:{color:'#6f6a62',formatter:'{value}%'}, splitLine:{lineStyle:{color:'rgba(37,32,27,0.08)'}} },
+        series: [{ type:'line', data: weeks.map(w=>w.usageRate), smooth:true,
+                   lineStyle:{color:ACCENT,width:3},
+                   areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(22,163,74,0.2)'},{offset:1,color:'rgba(22,163,74,0.01)'}])},
+                   itemStyle:{color:ACCENT}, symbol:'circle', symbolSize:6 }]
+    };
+}
+
+function buildProportionOpt(mod) {
+    if (!mod || !mod.categories || mod.categories.length === 0) return EMPTY_OPT;
+    return {
+        tooltip: { trigger:'item', formatter:'{b}: {c}次 ({d}%)' },
+        legend: { bottom:6, textStyle:{color:'#6f6a62',fontSize:11}, itemWidth:12, itemHeight:12 },
+        color: ['#16a34a','#2563eb','#f97316','#dc2626','#8b5cf6','#64748b'],
+        series: [{ type:'pie', radius:['40%','70%'], center:['50%','45%'],
+                    label:{color:'#181816',fontSize:12,formatter:'{b}\n{d}%'}, labelLine:{lineStyle:{color:'rgba(37,32,27,0.15)'}},
+                    data: mod.categories.map(c => ({name:c.category||'未指定', value:c.count})),
+                    emphasis:{itemStyle:{shadowBlur:20,shadowColor:'rgba(0,0,0,0.4)'}} }]
+    };
+}
+
+function buildRegistrationOpt(mod) {
+    if (!mod || !mod.departments || mod.departments.length === 0) return EMPTY_OPT;
+    const depts = mod.departments;
+    return {
+        tooltip: { trigger:'axis', axisPointer:{type:'shadow'},
+            formatter: ps => { const d = depts[ps[0].dataIndex]; return `${d.department}<br/>已登记: <b>${d.registeredCount}</b> / ${d.totalCount}<br/>登记率: <b>${d.registrationRate}%</b>`; }},
+        grid: { top: 10, right: 20, bottom: 40, left: 80 },
+        xAxis: { type:'value', max:100, axisLabel:{color:'#6f6a62',formatter:'{value}%'}, splitLine:{lineStyle:{color:'rgba(37,32,27,0.08)'}} },
+        yAxis: { type:'category', data: depts.map(d=>d.department), axisLabel:{color:'#6f6a62',fontSize:11} },
+        series: [{ type:'bar', data: depts.map(d=>d.registrationRate), barWidth:18,
+                    itemStyle: { color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#16a34a'},{offset:1,color:'#4ade80'}]), borderRadius:[0,4,4,0] },
+                    label:{show:true,position:'right',color:'#181816',fontSize:11,formatter:'{c}%'} }]
+    };
+}
+
+/* 加载学期列表，取最新学期 ID */
+async function loadTerms() {
+    try {
+        const terms = await apiFetch('/api/terms');
+        if (terms && terms.length > 0) {
+            currentTermId = terms[terms.length - 1].id;
+        }
+    } catch (e) { console.error('[dashboard] loadTerms failed:', e); }
+}
+
+/* ========== 模式切换 ========== */
+function switchMode(m, el) {
+    mode = m;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const showDate = m === 'STAGE';
+    document.getElementById('dateLabel').style.display = showDate ? '' : 'none';
+    document.getElementById('startDate').style.display = showDate ? '' : 'none';
+    document.getElementById('endDate').style.display = showDate ? '' : 'none';
+    loadDashboard();
+}
+
+/* ========== 加载数据 ========== */
+async function loadDashboard() {
+    let url = `/api/stats/dashboard?mode=${mode}`;
+    if (currentTermId) url += `&termId=${currentTermId}`;
+    if (mode === 'STAGE') {
+        const s = document.getElementById('startDate').value;
+        const e = document.getElementById('endDate').value;
+        if (s) url += `&startDate=${s}`;
+        if (e) url += `&endDate=${e}`;
+    }
+    console.log('[dashboard] requesting:', url);
+    try {
+        const data = await apiFetch(url);
+        console.log('[dashboard] response ok, data=', data ? 'has data' : 'NULL');
+        if (!data) return;
+        _latestData = data;
+        renderOccupancy(data.occupancy);
+        renderAlerts(data.alerts);
+        renderAllCharts();
+    } catch (e) {
+        console.error('[dashboard] loadDashboard FAILED:', e.message);
+    }
+}
+
+/* ========== ① 实时占用 ========== */
+function renderOccupancy(mod) {
+    if (!mod) { document.getElementById('body-occupancy').innerHTML = '<div class="no-alert">无数据</div>'; return; }
+    const { totalRooms, occupiedRooms, freeRooms, rooms } = mod;
+    let html = `<div class="occupancy-summary">
+        <div class="occ-card"><div class="num" style="color:var(--accent)">${totalRooms||0}</div><div class="lbl">总教室</div></div>
+        <div class="occ-card"><div class="num" style="color:var(--red)">${occupiedRooms||0}</div><div class="lbl">使用中</div></div>
+        <div class="occ-card"><div class="num" style="color:var(--green)">${freeRooms||0}</div><div class="lbl">空闲</div></div>
+    </div><div class="occ-list">`;
+    (rooms || []).forEach(r => {
+        const cls = r.status === 'occupied' ? 'occupied' : 'free';
+        const icon = r.status === 'occupied' ? '&#9679;' : '&#9675;';
+        html += `<span class="occ-chip ${cls}">${icon} ${esc(r.buildingName)} ${esc(r.roomNumber)}</span>`;
+    });
+    html += '</div>';
+    document.getElementById('body-occupancy').innerHTML = html;
+}
+
+/* ========== ⑥ 异常提醒 ========== */
+function renderAlerts(mod) {
+    const el = document.getElementById('body-alerts');
+    if (!mod) { el.innerHTML='<div class="no-alert">无数据</div>'; return; }
+    const { overdueRecords=[], equipmentAnomalies=[] } = mod;
+    if (overdueRecords.length===0 && equipmentAnomalies.length===0) {
+        el.innerHTML='<div class="no-alert" style="color:var(--green)">&#10003; 暂无异常</div>';
+        return;
+    }
+    let html = '<ul class="alert-list">';
+    overdueRecords.forEach(a => {
+        html += `<li class="alert-item overdue">
+            <span class="alert-tag t-overdue">逾期</span>
+            <span class="alert-text"><b>${esc(a.courseName||'')}</b> · ${esc(a.department||'')} · ${esc(a.reporterName||'')}<br/>${esc(a.buildingName||'')} ${esc(a.roomNumber||'')} · ${esc(a.usageDate||'')}</span>
+        </li>`;
+    });
+    equipmentAnomalies.forEach(a => {
+        html += `<li class="alert-item equip">
+            <span class="alert-tag t-equip">异常</span>
+            <span class="alert-text"><b>${esc(a.courseName||'')}</b> · ${esc(a.department||'')} · ${esc(a.reporterName||'')}<br/>${esc(a.status||'')} · ${esc(a.buildingName||'')} ${esc(a.roomNumber||'')}</span>
+        </li>`;
+    });
+    html += '</ul>';
+    el.innerHTML = html;
+}
+
+/* ========== 截图导出 ========== */
+async function takeScreenshot() {
+    const btn = document.querySelector('.btn-screenshot');
+    btn.textContent = '截图生成中...';
+    btn.disabled = true;
+    try {
+        const canvas = await html2canvas(document.body, {
+            backgroundColor: '#f8f6f2',
+            scale: 2,
+            useCORS: true,
+            logging: false
+        });
+        const link = document.createElement('a');
+        link.download = '排课数据大屏_' + new Date().toISOString().slice(0,10) + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    } catch (e) {
+        alert('截图失败：' + e.message);
+    } finally {
+        btn.textContent = '导出大屏截图';
+        btn.disabled = false;
+    }
+}
+
+/* ========== 窗口自适应 ========== */
+window.addEventListener('resize', () => {
+    Object.values(_charts).forEach(c => { if (c && !c.isDisposed()) c.resize(); });
+});
+
+/* ========== 工具 ========== */
+function esc(s) { const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+
+/* ========== 启动 ========== */
+(async function boot() {
+    await loadTerms();
+    loadDashboard();
+})();
+</script>
+</body>
+</html>

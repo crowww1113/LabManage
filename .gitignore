@@ -1,0 +1,23 @@
+# Maven 编译产物
+backend/target/
+
+# H2 数据库文件
+backend/data/*.db
+data/*.db
+
+# Cookies
+backend/cookies.txt
+
+# 日志文件
+*.log
+*.trace.db
+
+# IDE 配置
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# 操作系统文件
+.DS_Store
+Thumbs.db

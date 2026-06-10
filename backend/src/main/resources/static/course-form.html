@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>课程表单</title>
+    <style>
+        :root {--bg:#eff2f5;--panel:rgba(255,255,255,0.92);--ink:#181816;--text:#26241f;--muted:#6f6a62;--line:rgba(37,32,27,0.1);--accent:#3f5a52;--radius:20px;--radius-sm:12px;}
+        *{box-sizing:border-box;}body{margin:0;background:linear-gradient(180deg,#f8f6f2 0%,#f1eee8 100%);font-family:Inter,sans-serif;}
+        .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh;}
+        .sidebar{background:var(--panel);border-right:1px solid var(--line);padding:30px 20px;}
+        .main{padding:40px;}
+        .card{background:var(--panel);border-radius:var(--radius);padding:24px;}
+        .form-group{margin-bottom:16px;}
+        label{display:block;margin-bottom:6px;font-size:13px;font-weight:600;}
+        input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;}
+        .btn{padding:10px 16px;background:#000;color:#fff;border:none;border-radius:12px;cursor:pointer;}
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div style="padding:20px;background:rgba(63,90,82,.06);border-radius:20px;text-align:center;margin-bottom:30px;">
+            <h1 style="font-size:18px;">实验室管理系统</h1>
+        </div>
+        <button onclick="go('/course')" style="width:100%;padding:10px;border-radius:12px;background:transparent;border:none;cursor:pointer;">← 返回</button>
+    </aside>
+    <main class="main">
+        <h2>新增/编辑课程</h2>
+        <div class="card" style="max-width:600px;">
+            <div class="form-group"><label>课程中文名称</label><input placeholder="如：计算机应用基础"></div>
+            <div class="form-group"><label>课程英文名称</label><input placeholder="如：Computer Basics"></div>
+            <div class="form-group"><label>修读性质</label><input placeholder="必修/选修"></div>
+            <div class="form-group"><label>学分</label><input type="number" step="0.1"></div>
+            <div class="form-group"><label>总学时</label><input type="number"></div>
+            <div class="form-group"><label>讲授学时</label><input type="number"></div>
+            <div class="form-group"><label>实践学时</label><input type="number"></div>
+            <div class="form-group"><label>实验学时</label><input type="number"></div>
+            <div class="form-group"><label>网络学时</label><input type="number"></div>
+            <div class="form-group"><label>设课学期</label><input placeholder="如：2025-2026-1"></div>
+            <button class="btn" onclick="alert('保存成功');go('/course')">保存</button>
+        </div>
+    </main>
+</div>
+<script>function go(u){location.href=u;}</script>
+</body>
+</html>

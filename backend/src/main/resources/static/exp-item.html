@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验项目库管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background: #fff;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>实验项目库管理</h1>
+    <div style="margin-bottom: 20px;">
+        <button class="btn" onclick="openAddModal()">新增项目</button>
+        <button class="btn" onclick="exportExpItem()">导出 Word</button>
+    </div>
+    <table id="itemTable">
+        <thead>
+            <tr>
+                <th>课程编号</th>
+                <th>实验项目名称</th>
+                <th>实验学时</th>
+                <th>实验类别</th>
+                <th>实验要求</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- 新增/编辑模态框 -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增项目</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>课程编号</label>
+                <input type="number" id="modalCourseId" placeholder="请输入课程编号">
+            </div>
+            <div class="form-group">
+                <label>实验项目名称</label>
+                <input type="text" id="modalItemName" placeholder="请输入实验项目名称">
+            </div>
+            <div class="form-group">
+                <label>实验学时</label>
+                <input type="number" id="modalHour" placeholder="请输入实验学时">
+            </div>
+            <div class="form-group">
+                <label>实验类别</label>
+                <select id="modalExpType"></select>
+            </div>
+            <div class="form-group">
+                <label>实验要求</label>
+                <select id="modalRequirement"></select>
+            </div>
+            <input type="hidden" id="modalItemId">
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="saveItem()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+<script>
+        console.log('exp-item.html loaded');
+
+        // 页面加载时获取数据
+        window.onload = function () {
+            loadAllDictionaries().then(() => {
+                renderDictSelectOptions('modalExpType', 'experiment_type', [{ value: '', text: '请选择' }]);
+                renderDictSelectOptions('modalRequirement', 'experiment_requirement', [{ value: '', text: '请选择' }]);
+            });
+            console.log('Page loaded, fetching data...');
+            fetch('/api/exp-item')
+                .then(res => {
+                    console.log('Response status:', res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    console.log('Data received:', data);
+                    const tbody = document.querySelector('#itemTable tbody');
+                    tbody.innerHTML = '';
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${item.courseId || ''}</td>
+                                <td>${item.itemName || ''}</td>
+                                <td>${item.hour || ''}</td>
+                                <td>${item.expType || ''}</td>
+                                <td>${item.requirement || ''}</td>
+                                <td>
+                                    <button class="btn" onclick="editItem(${item.id}, ${item.courseId}, '${item.itemName}', ${item.hour}, '${item.expType}', '${item.requirement}')">编辑</button>
+                                    <button class="btn btn-danger" onclick="deleteItem(${item.id})">删除</button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        console.log('Data is not an array:', data);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching data:', err);
+                    alert('加载数据失败：' + err.message);
+                });
+        };
+
+        // 打开模态框
+        function openModal(isEdit = false) {
+            document.getElementById('itemModal').style.display = 'block';
+            document.getElementById('modalTitle').textContent = isEdit ? '编辑项目' : '新增项目';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('itemModal').style.display = 'none';
+            clearModal();
+        }
+
+        // 清空模态框
+        function clearModal() {
+            document.getElementById('modalItemId').value = '';
+            document.getElementById('modalCourseId').value = '';
+            document.getElementById('modalItemName').value = '';
+            document.getElementById('modalHour').value = '';
+            document.getElementById('modalExpType').value = '';
+            document.getElementById('modalRequirement').value = '';
+        }
+
+        // 新增项目
+        function openAddModal() {
+            openModal(false);
+        }
+
+        // 编辑项目
+        function editItem(id, courseId, itemName, hour, expType, requirement) {
+            openModal(true);
+            document.getElementById('modalItemId').value = id;
+            document.getElementById('modalCourseId').value = courseId;
+            document.getElementById('modalItemName').value = itemName;
+            document.getElementById('modalHour').value = hour;
+            document.getElementById('modalExpType').value = expType;
+            document.getElementById('modalRequirement').value = requirement;
+        }
+
+        // 保存项目（新增或编辑）
+        function saveItem() {
+            const id = document.getElementById('modalItemId').value;
+            const courseId = document.getElementById('modalCourseId').value;
+            const itemName = document.getElementById('modalItemName').value;
+            const hour = document.getElementById('modalHour').value;
+            const expType = document.getElementById('modalExpType').value;
+            const requirement = document.getElementById('modalRequirement').value;
+
+            if (!courseId || !itemName || !hour || !expType || !requirement) {
+                alert('请填写所有字段！');
+                return;
+            }
+
+            const url = id ? `/api/exp-item/${id}` : '/api/exp-item';
+            const method = id ? 'PUT' : 'POST';
+            const body = {
+                courseId: parseInt(courseId),
+                itemName,
+                hour: parseInt(hour),
+                expType,
+                requirement
+            };
+
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(() => {
+                alert(id ? '更新成功！' : '新增成功！');
+                window.location.reload();
+            }).catch(err => {
+                alert(id ? '更新失败：' + err.message : '新增失败：' + err.message);
+            });
+        }
+
+        // 删除项目
+        function deleteItem(id) {
+            if (confirm('确定要删除吗？')) {
+                fetch(`/api/exp-item/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        alert('删除成功！');
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        alert('删除失败：' + err.message);
+                    });
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function (event) {
+            const modal = document.getElementById('itemModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // 导出实验项目库 Word
+        function exportExpItem() {
+            window.location.href = "/export/exp-item";
+        }
+    </script>
+</body>
+
+</html>

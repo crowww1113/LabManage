@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 实验室管理系统</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    body {
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.7), transparent 30%), linear-gradient(180deg, #f8f6f2 0%, #f1eee8 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .login-card {
+      background: rgba(255,255,255,0.92);
+      width: 460px;
+      padding: 48px 40px;
+      border-radius: 20px;
+      box-shadow: 0 12px 34px rgba(23, 22, 19, 0.06);
+      border: 1px solid rgba(37, 32, 27, 0.08);
+      text-align: center;
+    }
+    .login-header {
+      margin-bottom: 36px;
+    }
+    .login-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(63, 90, 82, 0.08);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .login-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: #3f5a52;
+      stroke-width: 1.8;
+      fill: none;
+    }
+    .login-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #181816;
+      margin-bottom: 8px;
+    }
+    .login-subtitle {
+      font-size: 15px;
+      color: #6f6a62;
+    }
+    .login-tabs {
+      display: flex;
+      margin-bottom: 24px;
+      border-radius: 12px;
+      background: rgba(37, 32, 27, 0.04);
+      padding: 4px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 0;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6f6a62;
+    }
+    .tab.active {
+      background: #fff;
+      color: #181816;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #26241f;
+      font-weight: 500;
+    }
+    .form-group input {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      border: 1px solid rgba(37, 32, 27, 0.08);
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s;
+      background: #fff;
+    }
+    .form-group input:focus {
+      border-color: #3f5a52;
+      box-shadow: 0 0 0 3px rgba(63, 90, 82, 0.1);
+    }
+    .form-group select {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      border: 1px solid rgba(37, 32, 27, 0.08);
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s;
+      background: #fff;
+    }
+    .form-group select:focus {
+      border-color: #3f5a52;
+      box-shadow: 0 0 0 3px rgba(63, 90, 82, 0.1);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .error-msg {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+      display: none;
+    }
+    .login-btn {
+      width: 100%;
+      height: 52px;
+      background: #181816;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .login-btn:hover {
+      opacity: 0.92;
+    }
+    .demo-tip {
+      margin-top: 24px;
+      padding: 16px;
+      background: rgba(63, 90, 82, 0.04);
+      border-radius: 12px;
+      text-align: left;
+      font-size: 14px;
+      color: #3f5a52;
+    }
+    .demo-tip h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+    .demo-tip p {
+      margin: 4px 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<div class="login-card">
+  <div class="login-header">
+    <div class="login-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <h1 class="login-title">高校实验室管理系统</h1>
+    <p class="login-subtitle">请登录以继续使用系统</p>
+  </div>
+
+  <div class="login-tabs">
+    <div class="tab active" data-tab="login">登录</div>
+    <div class="tab" data-tab="register">注册</div>
+  </div>
+
+  <div class="error-msg" id="errorMsg">账号或密码错误</div>
+
+  <!-- 登录表单 -->
+  <div id="loginTab" class="tab-content active">
+    <form id="loginForm" onsubmit="return handleLogin(event)">
+      <div class="form-group">
+        <label>登录账号</label>
+        <input type="text" id="loginUsername" name="username" placeholder="请输入账号" value="admin" required>
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="loginPassword" name="password" placeholder="请输入密码" value="admin123" required>
+      </div>
+      <button type="submit" class="login-btn">登录</button>
+    </form>
+  </div>
+
+  <div id="registerTab" class="tab-content">
+    <form id="registerForm">
+      <div class="form-group">
+        <label>账号</label>
+        <input type="text" name="regUsername" id="regUsername" placeholder="请输入账号">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" name="regPassword" id="regPassword" placeholder="请输入密码">
+      </div>
+      <div class="form-group">
+        <label>确认密码</label>
+        <input type="password" name="regConfirmPassword" id="regConfirmPassword" placeholder="请确认密码">
+      </div>
+      <div class="form-group">
+        <label>真实姓名</label>
+        <input type="text" name="regRealName" id="regRealName" placeholder="请输入真实姓名">
+      </div>
+      <div class="form-group">
+        <label>角色</label>
+        <select name="regRole" id="regRole" class="form-control">
+          <option value="LAB_ADMIN">实验管理员</option>
+          <option value="TEACHER">授课教师</option>
+          <option value="STUDENT">学生/其他用户</option>
+        </select>
+      </div>
+      <button type="button" class="login-btn" id="registerBtn">注册</button>
+    </form>
+  </div>
+
+  <div class="demo-tip">
+    <h4>演示账号：</h4>
+    <p>admin / admin123（实验管理员）</p>
+    <p>lab_wang / lab123456（实验管理员）</p>
+    <p>teacher_liu / teacher123（授课教师）</p>
+    <p>stu_chen / student123（学生/其他用户）</p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const demoTip = document.querySelector('.demo-tip');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function () {
+        const target = this.dataset.tab;
+        tabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        tabContents.forEach(c => c.classList.remove('active'));
+        document.getElementById(target + 'Tab').classList.add('active');
+        demoTip.style.display = target === 'login' ? 'block' : 'none';
+      });
+    });
+
+    // 登录处理函数
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: '登录失败' }));
+            alert(err.message || '账号或密码错误');
+            return;
+          }
+          
+          const data = await res.json();
+          
+          // 存储 JWT token 和用户信息
+          localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('loginUser', JSON.stringify({
+            username: data.username,
+            realName: data.realName,
+            roleName: data.roleName || data.roles?.[0] || '用户',
+            roleCode: data.roleCode || data.roles?.[0] || 'STUDENT',
+            role: data.roleName || data.roles?.[0] || '用户',
+            roles: data.roles || [data.roleCode || 'STUDENT']
+          }));
+          localStorage.setItem('user', JSON.stringify({
+            username: data.username,
+            realName: data.realName,
+            role: data.roleName || data.roles?.[0] || '用户',
+            roles: data.roles || [data.roleCode || 'STUDENT']
+          }));
+          
+          // 跳转到首页
+          window.location.href = '/index.html';
+        } catch (err) {
+          alert('网络错误，请检查服务是否启动');
+          console.error(err);
+        }
+      });
+    }
+  });
+</script>
+</body>
+</html>

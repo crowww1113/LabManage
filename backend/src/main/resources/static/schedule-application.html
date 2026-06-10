@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>授课申请单</title>
+    <script src="api-fetch.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; padding: 20px; background: #fff; color: #333; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+        label { font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        textarea { min-height: 88px; resize: vertical; }
+        .btn { padding: 9px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: #fff; font-size: 14px; }
+        .btn:hover { background: #0056b3; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; vertical-align: top; }
+        th { background: #f5f5f5; }
+        tr:hover { background: #fafafa; }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        .status { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: #eef2f7; }
+        .empty { padding: 24px; text-align: center; color: #666; border: 1px dashed #ddd; border-radius: 4px; }
+        .modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; }
+        .modal-content { background: #fff; width: 90%; max-width: 820px; margin: 4% auto; border-radius: 8px; padding: 24px; max-height: 88vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; font-size: 20px; }
+        .close { font-size: 28px; cursor: pointer; color: #999; }
+        .close:hover { color: #333; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        .full-row { grid-column: 1 / -1; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .detail-item { background: #f8f9fa; border-radius: 4px; padding: 10px; }
+        .detail-item strong { display: block; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<h1>授课申请单</h1>
+
+<div class="toolbar">
+    <div class="form-group">
+        <label for="filterTermId">学期ID</label>
+        <input id="filterTermId" type="number" placeholder="按学期筛选">
+    </div>
+    <div class="form-group">
+        <label for="filterTeacherId">教师ID</label>
+        <input id="filterTeacherId" type="number" placeholder="按教师筛选">
+    </div>
+    <button class="btn" onclick="loadApplications()">查询</button>
+    <button id="createBtn" class="btn btn-success" onclick="openCreateModal()">新增申请单</button>
+</div>
+
+<div id="tableWrapper"></div>
+
+<div id="applicationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">新增授课申请单</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="form-grid">
+            <div class="form-group"><label>学期ID</label><input id="termId" type="number"></div>
+            <div class="form-group"><label>教学任务ID</label><input id="teachingTaskId" type="number"></div>
+            <div class="form-group"><label>课程ID</label><input id="courseId" type="number"></div>
+            <div class="form-group"><label>班级ID</label><input id="clazzId" type="number"></div>
+            <div class="form-group"><label>教师ID</label><input id="teacherId" type="number"></div>
+            <div class="form-group"><label>期望楼栋</label><input id="preferredBuildingName" type="text"></div>
+            <div class="form-group"><label>期望房间号</label><input id="preferredRoomNumber" type="text"></div>
+            <div class="form-group"><label>期望周次</label><input id="preferredWeekNo" type="number"></div>
+            <div class="form-group"><label>期望星期</label><input id="preferredDayOfWeek" type="number" min="1" max="7"></div>
+            <div class="form-group"><label>期望日期</label><input id="preferredDate" type="date"></div>
+            <div class="form-group"><label>期望节次ID</label><input id="preferredTimeSlotId" type="number"></div>
+            <div class="form-group"><label>学生人数</label><input id="studentCount" type="number"></div>
+            <div class="form-group"><label>实验组数</label><input id="groupCount" type="number"></div>
+            <div class="form-group"><label>每组人数</label><input id="studentsPerGroup" type="number"></div>
+            <div class="form-group full-row"><label>实验内容</label><textarea id="experimentContent"></textarea></div>
+            <div class="form-group full-row"><label>实验要求</label><textarea id="experimentRequirement"></textarea></div>
+            <div class="form-group full-row"><label>设备要求</label><textarea id="equipmentRequirement"></textarea></div>
+        </div>
+        <input id="applicationId" type="hidden">
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+            <button class="btn btn-success" onclick="saveApplication()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>授课申请单详情</h2>
+            <span class="close" onclick="closeDetailModal()">&times;</span>
+        </div>
+        <div id="detailContent" class="detail-grid"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDetailModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const roleName = JSON.parse(localStorage.getItem('loginUser') || '{}').roleName || '';
+    const isLabAdmin = roleName === '实验管理员';
+    const isTeacher = roleName === '授课教师';
+    function getNumberValue(id) {
+        const value = document.getElementById(id).value;
+        return value === '' ? null : Number(value);
+    }
+
+    function getTextValue(id) {
+        return document.getElementById(id).value.trim();
+    }
+
+    function getPayload() {
+        return {
+            termId: getNumberValue('termId'),
+            teachingTaskId: getNumberValue('teachingTaskId'),
+            courseId: getNumberValue('courseId'),
+            clazzId: getNumberValue('clazzId'),
+            teacherId: getNumberValue('teacherId'),
+            preferredBuildingName: getTextValue('preferredBuildingName') || null,
+            preferredRoomNumber: getTextValue('preferredRoomNumber') || null,
+            preferredWeekNo: getNumberValue('preferredWeekNo'),
+            preferredDayOfWeek: getNumberValue('preferredDayOfWeek'),
+            preferredDate: document.getElementById('preferredDate').value || null,
+            preferredTimeSlotId: getNumberValue('preferredTimeSlotId'),
+            studentCount: getNumberValue('studentCount'),
+            groupCount: getNumberValue('groupCount'),
+            studentsPerGroup: getNumberValue('studentsPerGroup'),
+            experimentContent: getTextValue('experimentContent'),
+            experimentRequirement: getTextValue('experimentRequirement') || null,
+            equipmentRequirement: getTextValue('equipmentRequirement') || null
+        };
+    }
+
+    function statusText(status) {
+        const map = {
+            DRAFT: '草稿',
+            SUBMITTED: '已提交',
+            APPROVED: '已通过',
+            REJECTED: '已驳回',
+            WITHDRAWN: '已撤回',
+            APPROVING: '审批中'
+        };
+        return map[status] || status || '-';
+    }
+
+    function renderTable(list) {
+        const wrapper = document.getElementById('tableWrapper');
+        if (!Array.isArray(list) || list.length === 0) {
+            wrapper.innerHTML = '<div class="empty">暂无授课申请单</div>';
+            return;
+        }
+
+        wrapper.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>申请单号</th>
+                        <th>学期ID</th>
+                        <th>教师ID</th>
+                        <th>课程ID</th>
+                        <th>班级ID</th>
+                        <th>期望时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${list.map(item => `
+                        <tr>
+                            <td>${item.id ?? '-'}</td>
+                            <td>${item.applicationNo || '-'}</td>
+                            <td>${item.termId ?? '-'}</td>
+                            <td>${item.teacherId ?? '-'}</td>
+                            <td>${item.courseId ?? '-'}</td>
+                            <td>${item.clazzId ?? '-'}</td>
+                            <td>${formatPreferredTime(item)}</td>
+                            <td><span class="status">${statusText(item.status)}</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn" onclick="viewDetail(${item.id})">详情</button>
+                                    ${isTeacher ? `<button class="btn" onclick="editApplication(${item.id})">编辑</button>` : ''}
+                                    ${isTeacher ? `<button class="btn btn-success" onclick="submitApplication(${item.id})">提交</button>` : ''}
+                                    ${isLabAdmin ? `<button class="btn btn-success" onclick="approveApplication(${item.id})">通过</button>` : ''}
+                                    ${isLabAdmin ? `<button class="btn btn-danger" onclick="rejectApplication(${item.id})">驳回</button>` : ''}
+                                    ${isTeacher ? `<button class="btn btn-secondary" onclick="withdrawApplication(${item.id})">撤回</button>` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function formatPreferredTime(item) {
+        const parts = [];
+        if (item.preferredDate) parts.push(item.preferredDate);
+        if (item.preferredWeekNo) parts.push(`第${item.preferredWeekNo}周`);
+        if (item.preferredDayOfWeek) parts.push(`星期${item.preferredDayOfWeek}`);
+        if (item.preferredTimeSlotId) parts.push(`节次${item.preferredTimeSlotId}`);
+        return parts.length ? parts.join(' / ') : '-';
+    }
+
+    async function loadApplications() {
+        try {
+            const params = new URLSearchParams();
+            const termId = document.getElementById('filterTermId').value;
+            const teacherId = document.getElementById('filterTeacherId').value;
+            if (termId) params.set('termId', termId);
+            if (teacherId) params.set('teacherId', teacherId);
+            const query = params.toString() ? `?${params.toString()}` : '';
+            const list = await apiFetch(`/api/schedule-applications${query}`);
+            renderTable(list);
+        } catch (error) {
+            alert('加载授课申请单失败：' + error.message);
+        }
+    }
+
+    function openCreateModal() {
+        if (!isTeacher) {
+            alert('只有授课教师可以新增授课申请单');
+            return;
+        }
+        document.getElementById('modalTitle').textContent = '新增授课申请单';
+        clearForm();
+        document.getElementById('applicationModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('applicationModal').style.display = 'none';
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').style.display = 'none';
+    }
+
+    function clearForm() {
+        ['applicationId','termId','teachingTaskId','courseId','clazzId','teacherId','preferredBuildingName','preferredRoomNumber','preferredWeekNo','preferredDayOfWeek','preferredDate','preferredTimeSlotId','studentCount','groupCount','studentsPerGroup','experimentContent','experimentRequirement','equipmentRequirement'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+    }
+
+    async function saveApplication() {
+        const id = document.getElementById('applicationId').value;
+        const payload = getPayload();
+        try {
+            if (!payload.termId || !payload.teachingTaskId || !payload.courseId || !payload.clazzId || !payload.teacherId || !payload.studentCount) {
+                alert('请填写必填项');
+                return;
+            }
+            const url = id ? `/api/schedule-applications/${id}` : '/api/schedule-applications';
+            const method = id ? 'PUT' : 'POST';
+            await apiFetch(url, { method, body: JSON.stringify(payload) });
+            alert(id ? '更新成功' : '新增成功');
+            closeModal();
+            await loadApplications();
+        } catch (error) {
+            alert((id ? '更新失败：' : '新增失败：') + error.message);
+        }
+    }
+
+    async function editApplication(id) {
+        try {
+            const item = await apiFetch(`/api/schedule-applications/${id}`);
+            document.getElementById('modalTitle').textContent = '编辑授课申请单';
+            document.getElementById('applicationId').value = item.id ?? '';
+            document.getElementById('termId').value = item.termId ?? '';
+            document.getElementById('teachingTaskId').value = item.teachingTaskId ?? '';
+            document.getElementById('courseId').value = item.courseId ?? '';
+            document.getElementById('clazzId').value = item.clazzId ?? '';
+            document.getElementById('teacherId').value = item.teacherId ?? '';
+            document.getElementById('preferredBuildingName').value = item.preferredBuildingName ?? '';
+            document.getElementById('preferredRoomNumber').value = item.preferredRoomNumber ?? '';
+            document.getElementById('preferredWeekNo').value = item.preferredWeekNo ?? '';
+            document.getElementById('preferredDayOfWeek').value = item.preferredDayOfWeek ?? '';
+            document.getElementById('preferredDate').value = item.preferredDate ?? '';
+            document.getElementById('preferredTimeSlotId').value = item.preferredTimeSlotId ?? '';
+            document.getElementById('studentCount').value = item.studentCount ?? '';
+            document.getElementById('groupCount').value = item.groupCount ?? '';
+            document.getElementById('studentsPerGroup').value = item.studentsPerGroup ?? '';
+            document.getElementById('experimentContent').value = item.experimentContent ?? '';
+            document.getElementById('experimentRequirement').value = item.experimentRequirement ?? '';
+            document.getElementById('equipmentRequirement').value = item.equipmentRequirement ?? '';
+            document.getElementById('applicationModal').style.display = 'block';
+        } catch (error) {
+            alert('加载申请单失败：' + error.message);
+        }
+    }
+
+    async function viewDetail(id) {
+        try {
+            const item = await apiFetch(`/api/schedule-applications/${id}`);
+            const rows = [
+                ['申请单号', item.applicationNo],
+                ['学期ID', item.termId],
+                ['教学任务ID', item.teachingTaskId],
+                ['课程ID', item.courseId],
+                ['班级ID', item.clazzId],
+                ['教师ID', item.teacherId],
+                ['期望楼栋', item.preferredBuildingName],
+                ['期望房间号', item.preferredRoomNumber],
+                ['期望周次', item.preferredWeekNo],
+                ['期望星期', item.preferredDayOfWeek],
+                ['期望日期', item.preferredDate],
+                ['期望节次ID', item.preferredTimeSlotId],
+                ['学生人数', item.studentCount],
+                ['实验组数', item.groupCount],
+                ['每组人数', item.studentsPerGroup],
+                ['实验内容', item.experimentContent],
+                ['实验要求', item.experimentRequirement],
+                ['设备要求', item.equipmentRequirement],
+                ['审核意见', item.reviewComment],
+                ['审核人ID', item.reviewedBy],
+                ['状态', statusText(item.status)]
+            ];
+            document.getElementById('detailContent').innerHTML = rows.map(([label, value]) => `
+                <div class="detail-item">
+                    <strong>${label}</strong>
+                    <span>${value ?? '-'}</span>
+                </div>
+            `).join('');
+            document.getElementById('detailModal').style.display = 'block';
+        } catch (error) {
+            alert('加载详情失败：' + error.message);
+        }
+    }
+
+    async function submitApplication(id) {
+        try {
+            await apiFetch(`/api/schedule-applications/${id}/submit`, { method: 'POST' });
+            alert('提交成功');
+            await loadApplications();
+        } catch (error) {
+            alert('提交失败：' + error.message);
+        }
+    }
+
+    async function approveApplication(id) {
+        const reviewComment = prompt('请输入审核意见', '') || '';
+        try {
+            await apiFetch(`/api/schedule-applications/${id}/approve`, {
+                method: 'POST',
+                body: JSON.stringify({ reviewComment })
+            });
+            alert('审核通过成功');
+            await loadApplications();
+        } catch (error) {
+            alert('审核通过失败：' + error.message);
+        }
+    }
+
+    async function rejectApplication(id) {
+        const reviewComment = prompt('请输入驳回原因', '');
+        if (reviewComment === null) return;
+        try {
+            await apiFetch(`/api/schedule-applications/${id}/reject`, {
+                method: 'POST',
+                body: JSON.stringify({ reviewComment })
+            });
+            alert('驳回成功');
+            await loadApplications();
+        } catch (error) {
+            alert('驳回失败：' + error.message);
+        }
+    }
+
+    async function withdrawApplication(id) {
+        try {
+            await apiFetch(`/api/schedule-applications/${id}/withdraw`, {
+                method: 'POST',
+                body: JSON.stringify({})
+            });
+            alert('撤回成功');
+            await loadApplications();
+        } catch (error) {
+            alert('撤回失败：' + error.message);
+        }
+    }
+
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('applicationModal')) {
+            closeModal();
+        }
+        if (event.target === document.getElementById('detailModal')) {
+            closeDetailModal();
+        }
+    };
+
+    loadApplications();
+</script>
+</body>
+</html>

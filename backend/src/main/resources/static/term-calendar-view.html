@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>校历视图</title>
+    <style>
+        * { box-sizing: border-box; font-family: 微软雅黑; margin: 0; padding: 0; }
+        body { padding: 20px; background: #f5f7fa; }
+        h3 { margin-bottom: 16px; color: #303133; }
+        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .weekday-header {
+            background: #409eff;
+            color: #fff;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 4px;
+        }
+        .weekday-header.weekend { background: #67c23a; }
+        .day {
+            background: #fff;
+            padding: 8px 4px;
+            text-align: center;
+            border: 1px solid #ebeef5;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+            min-height: 56px;
+        }
+        .day:hover {
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, .1);
+            transform: translateY(-2px);
+        }
+        .day .date { font-weight: 500; color: #303133; }
+        .day .week { font-size: 12px; color: #909399; margin-top: 4px; }
+        .day.holiday {
+            background: #fef0f0;
+            border-color: #fbc4c4;
+        }
+        .day.holiday .date { color: #f56c6c; }
+        .day.today {
+            background: #ecf5ff;
+            border-color: #409eff;
+        }
+        .day.today .date { color: #409eff; font-weight: 600; }
+        .empty { border: none; background: transparent; }
+        .loading { grid-column: 1 / -1; text-align: center; color: #909399; padding: 40px 0; }
+        .error { grid-column: 1 / -1; color: #f56c6c; text-align: center; padding: 40px 0; }
+    </style>
+</head>
+<body>
+<h3>学期校历</h3>
+<div class="grid" id="weekdays">
+    <div class="weekday-header weekend">周日</div>
+    <div class="weekday-header">周一</div>
+    <div class="weekday-header">周二</div>
+    <div class="weekday-header">周三</div>
+    <div class="weekday-header">周四</div>
+    <div class="weekday-header">周五</div>
+    <div class="weekday-header weekend">周六</div>
+</div>
+<div class="grid" id="calendar"></div>
+<script>
+    const token = localStorage.getItem('token');
+    const id = new URLSearchParams(location.search).get('id');
+    const calendarDiv = document.getElementById('calendar');
+    const headers = { 'Authorization': 'Bearer ' + token };
+
+    // 显示加载提示
+    calendarDiv.innerHTML = '<div class="loading">加载中...</div>';
+
+    // 今天的日期字符串
+    const today = new Date().toISOString().split('T')[0];
+
+    // 渲染日历函数
+    function renderCalendar(termId) {
+        fetch('/api/terms/' + termId + '/calendar', { headers })
+            .then(res => {
+                if (!res.ok) {
+                    if (res.status === 401 || res.status === 403) throw new Error("登录已过期，请重新登录");
+                    throw new Error("服务器响应错误 (状态码: " + res.status + ")");
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (!data || !Array.isArray(data) || data.length === 0) {
+                    calendarDiv.innerHTML = '<div class="loading">该学期暂未生成校历数据。</div>';
+                    return;
+                }
+
+                let html = '';
+
+                // 计算第一天是星期几，填充前置空白
+                const firstDay = new Date(data[0].date).getDay();
+                for (let i = 0; i < firstDay; i++) {
+                    html += '<div class="day empty"></div>';
+                }
+
+                // 渲染每一天
+                data.forEach(d => {
+                    const isToday = d.date === today;
+                    const isWeekend = d.dayOfWeek === 6 || d.dayOfWeek === 7;
+                    let classes = 'day';
+                    if (d.isHoliday) classes += ' holiday';
+                    else if (isToday) classes += ' today';
+
+                    html += `<div class="${classes}">
+                        <div class="date">${d.date.substring(5)}</div>
+                        <div class="week">第${d.week}周</div>
+                    </div>`;
+                });
+
+                calendarDiv.innerHTML = html;
+            })
+            .catch(err => {
+                console.error("日历加载报错:", err);
+                calendarDiv.innerHTML = `<div class="error">获取数据失败：${err.message}</div>`;
+            });
+    }
+
+    if (id) {
+        renderCalendar(id);
+    } else {
+        fetch('/api/terms', { headers })
+            .then(res => {
+                if (!res.ok) throw new Error("获取学期列表失败");
+                return res.json();
+            })
+            .then(terms => {
+                if (!terms || terms.length === 0) {
+                    calendarDiv.innerHTML = '<div class="loading">暂无学期数据。</div>';
+                    return;
+                }
+                let defaultTerm = terms.find(t => t.status === '1');
+                if (!defaultTerm) {
+                    terms.sort((a, b) => new Date(b.endDate) - new Date(a.endDate));
+                    defaultTerm = terms[0];
+                }
+                renderCalendar(defaultTerm.id);
+            })
+            .catch(err => {
+                console.error("获取学期列表报错:", err);
+                calendarDiv.innerHTML = `<div class="error">获取数据失败：${err.message}</div>`;
+            });
+    }
+</script>
+</body>
+</html>

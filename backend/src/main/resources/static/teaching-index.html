@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>教学信息管理</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑;}
+        body{background:#f5f7fa;display:flex;}
+        .sidebar{width:220px;background:#2f4050;height:100vh;padding:20px;color:white;position:fixed;}
+        .sidebar h2{margin-bottom:30px;text-align:center;}
+        .sidebar a{display:block;color:white;text-decoration:none;padding:12px 20px;margin:8px 0;border-radius:4px;transition:background 0.3s;}
+        .sidebar a:hover{background:#1ab394;}
+        .content{margin-left:220px;width:calc(100% - 220px);padding:20px;}
+        iframe{width:100%;height:calc(100vh - 40px);border:none;background:white;border-radius:8px;}
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <h2>教学信息模块</h2>
+    <a href="javascript:loadPage('course-list.html')">📚 课程管理</a>
+    <a href="javascript:loadPage('term-calendar.html')">📅 学期校历</a>
+    <a href="javascript:loadPage('major-list.html')">🏫 专业管理</a>
+    <a href="javascript:loadPage('clazz-list.html')">👥 班级管理</a>
+    <a href="javascript:loadPage('task-list.html')">📋 教学任务</a>
+    <a href="javascript:loadPage('time-slot.html')">⏰ 节次时间</a>
+    <a href="javascript:loadPage('schedule-application.html')">📝 授课申请单</a>
+</div>
+<div class="content">
+    <iframe id="mainFrame" src="course-list.html"></iframe>
+</div>
+
+<script>
+    const token = localStorage.getItem('token');
+    if(!token) location.href='/login.html';
+
+    function loadPage(url){
+        document.getElementById('mainFrame').src = url;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>通用规则</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h2 { margin-bottom: 20px; color: #1a1a1a; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 10px 20px; border: 1px solid #e0e0e0; border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { background: #f0f0f0; }
+    .tab-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+    th { background: #f8f9fa; font-weight: 600; color: #555; }
+    tr:hover { background: #f8f9fa; }
+
+    /* Buttons */
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 500; transition: all 0.2s;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-warning { background: #f59e0b; color: #fff; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    /* Toolbar */
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .toolbar select, .toolbar input {
+      padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;
+    }
+
+    /* Notification cards */
+    .notif-list { display: flex; flex-direction: column; gap: 10px; }
+    .notif-item {
+      background: #fff; border-radius: 8px; padding: 14px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 12px; align-items: flex-start;
+    }
+    .notif-item.unread { border-left: 3px solid #2563eb; background: #eff6ff; }
+    .notif-item .icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    .notif-item .content { flex: 1; }
+    .notif-item .title { font-weight: 600; margin-bottom: 4px; }
+    .notif-item .desc { font-size: 13px; color: #666; }
+    .notif-item .time { font-size: 12px; color: #999; margin-top: 4px; }
+    .notif-item .actions { flex-shrink: 0; }
+
+    /* QR Code display */
+    .qr-section { text-align: center; padding: 20px; }
+    .qr-code { display: inline-block; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .qr-code img { width: 150px; height: 150px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: #fff; border-radius: 10px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;
+    }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #2563eb; }
+    .stat-card .label { font-size: 13px; color: #888; margin-top: 4px; }
+
+    /* Alert */
+    .alert-box { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>通用规则</h2>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('asset-id')">资产标识</button>
+      <button class="tab-btn" onclick="switchTab('permission')">权限隔离</button>
+      <button class="tab-btn" onclick="switchTab('operation-log')">操作日志</button>
+      <button class="tab-btn" onclick="switchTab('notification')">消息通知</button>
+      <button class="tab-btn" onclick="switchTab('data-export')">数据导出</button>
+    </div>
+
+    <!-- 资产标识 -->
+    <div class="tab-content active" id="tab-asset-id">
+      <div class="alert-box alert-info">
+        ℹ️ 每台设备拥有唯一资产编号，建议贴二维码标签用于扫码操作。扫码可快速查看设备信息、借还记录等。
+      </div>
+      <div class="toolbar">
+        <select id="assetSelect"><option value="">选择设备查看二维码</option></select>
+        <button class="btn btn-primary" onclick="showQRCode()">生成二维码</button>
+      </div>
+      <div id="qrArea" class="qr-section" style="display:none;">
+        <div class="qr-code">
+          <div id="qrContent"></div>
+          <p style="margin-top:10px;font-size:13px;color:#666;" id="qrAssetInfo"></p>
+        </div>
+      </div>
+      <div id="assetListArea"></div>
+    </div>
+
+    <!-- 权限隔离 -->
+    <div class="tab-content" id="tab-permission">
+      <div class="alert-box alert-info">
+        ℹ️ 用户仅可访问本部门设备；管理员可跨部门管理。以下为当前用户权限配置。
+      </div>
+      <div id="permissionArea"></div>
+    </div>
+
+    <!-- 操作日志 -->
+    <div class="tab-content" id="tab-operation-log">
+      <div class="toolbar">
+        <select id="logModule">
+          <option value="">全部模块</option>
+          <option value="设备管理">设备管理</option>
+          <option value="设备借还">设备借还</option>
+          <option value="库存监控">库存监控</option>
+        </select>
+        <select id="logType">
+          <option value="">全部类型</option>
+          <option value="新增">新增</option>
+          <option value="修改">修改</option>
+          <option value="删除">删除</option>
+          <option value="审批">审批</option>
+          <option value="归还">归还</option>
+          <option value="续借">续借</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadLogs()">查询</button>
+        <button class="btn btn-warning" onclick="exportLogs()">导出Excel</button>
+      </div>
+      <div id="logArea"></div>
+    </div>
+
+    <!-- 消息通知 -->
+    <div class="tab-content" id="tab-notification">
+      <div class="toolbar">
+        <select id="notifType">
+          <option value="">全部类型</option>
+          <option value="借还申请">借还申请</option>
+          <option value="审批">审批</option>
+          <option value="完成">完成</option>
+          <option value="逾期提醒">逾期提醒</option>
+          <option value="检定到期">检定到期</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadNotifications()">查询</button>
+        <button class="btn btn-success" onclick="markAllRead()">全部已读</button>
+        <button class="btn btn-warning" onclick="exportNotifications()">导出Excel</button>
+      </div>
+      <div id="notifArea"></div>
+    </div>
+
+    <!-- 数据导出 -->
+    <div class="tab-content" id="tab-data-export">
+      <div class="alert-box alert-info">
+        ℹ️ 报表支持导出Excel格式，方便离线查看和数据分析。
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" style="cursor:pointer;" onclick="exportData('equipment')">
+          <div class="value">📋</div>
+          <div class="label">设备清单导出</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;" onclick="exportData('borrow')">
+          <div class="value">📊</div>
+          <div class="label">借还记录导出</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;" onclick="exportData('inventory')">
+          <div class="value">📦</div>
+          <div class="label">库存统计导出</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;" onclick="exportData('logs')">
+          <div class="value">📝</div>
+          <div class="label">操作日志导出</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LOG_API = '/api/operation-logs';
+    const NOTIF_API = '/api/notifications';
+    const EQUIP_API = '/api/equipment';
+    const BORROW_API = '/api/equipment-borrow';
+    const INV_API = '/api/inventory';
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+
+      switch(tabId) {
+        case 'asset-id': loadAssetList(); break;
+        case 'permission': loadPermission(); break;
+        case 'operation-log': loadLogs(); break;
+        case 'notification': loadNotifications(); break;
+      }
+    }
+
+    // ===== 资产标识 =====
+    function loadAssetList() {
+      fetch(EQUIP_API)
+        .then(res => res.json())
+        .then(data => {
+          const sel = document.getElementById('assetSelect');
+          sel.innerHTML = '<option value="">选择设备查看二维码</option>';
+          data.forEach(d => {
+            const o = document.createElement('option');
+            o.value = d.id;
+            o.textContent = d.assetNo + ' - ' + d.name;
+            sel.appendChild(o);
+          });
+
+          // Show asset list table
+          let html = '<table style="margin-top:16px;"><thead><tr><th>资产编号</th><th>设备名称</th><th>型号</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+          data.forEach(d => {
+            html += `<tr>
+              <td>${d.assetNo || '-'}</td>
+              <td>${d.name || '-'}</td>
+              <td>${d.model || '-'}</td>
+              <td>${d.status || '-'}</td>
+              <td><button class="btn btn-sm btn-primary" onclick="generateQR(${d.id}, '${d.assetNo}', '${d.name}')">查看二维码</button></td>
+            </tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('assetListArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    function showQRCode() {
+      const id = document.getElementById('assetSelect').value;
+      if (!id) { alert('请选择设备'); return; }
+      fetch(EQUIP_API + '/' + id)
+        .then(res => res.json())
+        .then(data => generateQR(data.id, data.assetNo, data.name))
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    function generateQR(id, assetNo, name) {
+      const qrData = JSON.stringify({ id, assetNo, name });
+      const encoded = encodeURIComponent(qrData);
+      document.getElementById('qrContent').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encoded}" alt="QR Code" />`;
+      document.getElementById('qrAssetInfo').textContent = `资产编号：${assetNo} | 设备名称：${name}`;
+      document.getElementById('qrArea').style.display = 'block';
+    }
+
+    // ===== 权限隔离 =====
+    function loadPermission() {
+      const userStr = localStorage.getItem('loginUser');
+      let user = null;
+      if (userStr) {
+        try { user = JSON.parse(userStr); } catch(e) {}
+      }
+
+      let html = '<table><thead><tr><th>配置项</th><th>当前值</th><th>说明</th></tr></thead><tbody>';
+      html += `<tr><td>当前用户</td><td>${user ? user.realName : '未登录'}</td><td>登录账号</td></tr>`;
+      html += `<tr><td>角色</td><td>${user ? user.roleName : '-'}</td><td>决定可访问的模块</td></tr>`;
+      html += `<tr><td>部门</td><td>${user ? (user.department || '无') : '-'}</td><td>用户仅可访问本部门设备</td></tr>`;
+      html += `<tr><td>跨部门权限</td><td>${user && (user.roleName === 'LAB_ADMIN' || user.roleName === 'EQUIPMENT_ADMIN') ? '✅ 是' : '❌ 否'}</td><td>管理员可跨部门管理</td></tr>`;
+      html += '</tbody></table>';
+      document.getElementById('permissionArea').innerHTML = html;
+    }
+
+    // ===== 操作日志 =====
+    function loadLogs() {
+      const module = document.getElementById('logModule').value;
+      const type = document.getElementById('logType').value;
+      let url = LOG_API + '?';
+      if (module) url += 'module=' + encodeURIComponent(module) + '&';
+      if (type) url += 'type=' + encodeURIComponent(type) + '&';
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            document.getElementById('logArea').innerHTML = '<p style="text-align:center;color:#888;padding:40px;">暂无日志记录</p>';
+            return;
+          }
+          let html = '<table><thead><tr><th>操作人</th><th>模块</th><th>操作类型</th><th>操作内容</th><th>IP地址</th><th>操作时间</th></tr></thead><tbody>';
+          data.forEach(d => {
+            html += `<tr>
+              <td>${d.operatorName || '-'}</td>
+              <td>${d.module || '-'}</td>
+              <td><span style="padding:2px 8px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:12px;">${d.operationType || '-'}</span></td>
+              <td>${d.content || '-'}</td>
+              <td>${d.ipAddress || '-'}</td>
+              <td>${d.createTime ? d.createTime.replace('T', ' ').substring(0, 19) : '-'}</td>
+            </tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('logArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    function exportLogs() {
+      fetch(LOG_API)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || data.length === 0) { alert('暂无数据可导出'); return; }
+          exportCSV(data, '操作日志');
+        })
+        .catch(err => alert('导出失败：' + err));
+    }
+
+    // ===== 消息通知 =====
+    function loadNotifications() {
+      const type = document.getElementById('notifType').value;
+      let url = NOTIF_API + '?';
+      if (type) url += 'type=' + encodeURIComponent(type) + '&';
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            document.getElementById('notifArea').innerHTML = '<p style="text-align:center;color:#888;padding:40px;">暂无通知</p>';
+            return;
+          }
+          let html = '<div class="notif-list">';
+          data.forEach(d => {
+            const iconMap = {
+              '借还申请': '📋', '审批': '✅', '完成': '🎉',
+              '逾期提醒': '⚠️', '检定到期': '🔔'
+            };
+            const icon = iconMap[d.type] || '📢';
+            html += `
+            <div class="notif-item ${d.isRead ? '' : 'unread'}">
+              <div class="icon">${icon}</div>
+              <div class="content">
+                <div class="title">${d.title || d.type}</div>
+                <div class="desc">${d.content || ''}</div>
+                <div class="time">${d.createTime ? d.createTime.replace('T', ' ').substring(0, 19) : '-'}</div>
+              </div>
+              <div class="actions">
+                ${!d.isRead ? `<button class="btn btn-sm btn-primary" onclick="markRead(${d.id})">标记已读</button>` : '<span style="color:#888;font-size:12px;">已读</span>'}
+              </div>
+            </div>`;
+          });
+          html += '</div>';
+          document.getElementById('notifArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    function markRead(id) {
+      fetch(NOTIF_API + '/' + id + '/read', { method: 'PUT' })
+        .then(res => res.json())
+        .then(() => loadNotifications())
+        .catch(err => console.error('标记失败:', err));
+    }
+
+    function markAllRead() {
+      const userStr = localStorage.getItem('loginUser');
+      let user = null;
+      if (userStr) { try { user = JSON.parse(userStr); } catch(e) {} }
+      if (!user || !user.id) { alert('未获取到用户信息'); return; }
+
+      fetch(NOTIF_API + '/mark-all-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiverId: user.id })
+      })
+        .then(res => res.json())
+        .then(() => loadNotifications())
+        .catch(err => console.error('标记失败:', err));
+    }
+
+    function exportNotifications() {
+      fetch(NOTIF_API)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || data.length === 0) { alert('暂无数据可导出'); return; }
+          exportCSV(data, '消息通知');
+        })
+        .catch(err => alert('导出失败：' + err));
+    }
+
+    // ===== 数据导出 =====
+    function exportData(type) {
+      let url = '';
+      let filename = '';
+      switch(type) {
+        case 'equipment':
+          url = EQUIP_API;
+          filename = '设备清单';
+          break;
+        case 'borrow':
+          url = BORROW_API;
+          filename = '借还记录';
+          break;
+        case 'inventory':
+          url = INV_API + '/summary';
+          filename = '库存统计';
+          break;
+        case 'logs':
+          url = LOG_API;
+          filename = '操作日志';
+          break;
+      }
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || (Array.isArray(data) && data.length === 0)) { alert('暂无数据可导出'); return; }
+          // If it's a summary object, convert to array
+          let exportData = Array.isArray(data) ? data : [data];
+          exportCSV(exportData, filename);
+        })
+        .catch(err => alert('导出失败：' + err));
+    }
+
+    // ===== CSV导出工具 =====
+    function exportCSV(data, filename) {
+      if (!data || data.length === 0) return;
+
+      // 中文表头映射
+      const headerMap = {
+        // 通用
+        'id': 'ID',
+        // 设备清单
+        'assetNo': '资产编号', 'name': '设备名称', 'model': '型号',
+        'categoryId': '分类ID', 'categoryName': '分类名称',
+        'unit': '单位', 'brand': '品牌', 'serialNo': '序列号', 'spec': '规格',
+        'price': '价格', 'fundSource': '经费来源', 'purchaseDate': '购入日期',
+        'useYears': '使用年限', 'supplier': '供应商', 'warrantyMonths': '保修期',
+        'locationId': '位置ID', 'locationName': '存放位置',
+        'responsibleId': '责任人ID', 'responsibleName': '责任人',
+        'status': '状态',
+        'deptId': '部门ID', 'deptName': '部门名称',
+        'isImportant': '重要设备', 'tags': '标签', 'remark': '备注',
+        'attachments': '附件',
+        'calibrationPeriodMonths': '检定周期', 'lastCalibrationDate': '上次检定日期',
+        'nextCalibrationDate': '下次检定日期', 'createdAt': '创建时间', 'updatedAt': '更新时间',
+        // 借还记录
+        'recordNo': '记录编号', 'equipmentId': '设备ID', 'equipmentName': '设备名称', 'equipmentAssetNo': '设备资产编号',
+        'borrowerId': '借用人ID', 'borrowerName': '借用人',
+        'purpose': '用途', 'courseId': '课程ID', 'courseName': '课程',
+        'expectedReturnDate': '预计归还日期', 'actualReturnDate': '实际归还日期',
+        'createTime': '申请时间', 'updateTime': '更新时间',
+        'mentorId': '导师ID', 'mentorName': '导师',
+        'mentorApproveRemark': '导师审批备注', 'mentorApproveTime': '导师审批时间',
+        'approverId': '审批人ID', 'approverName': '审批人',
+        'approveRemark': '审批备注', 'approveTime': '审批时间',
+        'isOverdue': '是否逾期', 'overdueDays': '逾期天数',
+        'returnLocation': '归还地点', 'returnResult': '验收结果',
+        'accessoriesInfo': '配件信息', 'damageDescription': '损坏说明',
+        'verifierId': '验收人ID', 'verifierName': '验收人',
+        'phone': '联系电话', 'useLocation': '使用地点',
+        'pickupPersonId': '领取人ID', 'pickupPersonName': '领取人',
+        'pickupTime': '领取时间', 'pickupEquipmentStatus': '领取时设备状态', 'pickupRemark': '领取备注',
+        'expectedReturnTime': '预计归还时间', 'expectedReturnLocation': '预计归还地点',
+        'returnApplyTime': '归还申请时间', 'actualReturnTime': '实际归还时间',
+        'returnConfirmTime': '归还确认时间',
+        'renewalStatus': '续借状态', 'renewalNewReturnDate': '续借归还日期',
+        'renewalRemark': '续借理由', 'renewalApplyTime': '续借申请时间',
+        'renewalApproverId': '续借审批人ID', 'renewalApproverName': '续借审批人',
+        'renewalApproveTime': '续借审批时间', 'renewalApproveRemark': '续借审批意见',
+        'overdueWarning': '逾期告警', 'overdueWarningTime': '逾期告警时间', 'overdueWarningRemark': '逾期告警备注',
+        'remind1day': '提前1天提醒', 'remindToday': '当天提醒', 'remindOverdue': '逾期后提醒',
+        // 操作日志
+        'operatorId': '操作人ID', 'operatorName': '操作人',
+        'module': '模块', 'operation': '操作', 'operationType': '操作类型',
+        'content': '内容', 'ip': 'IP地址', 'ipAddress': 'IP地址',
+        // 消息通知
+        'type': '类型', 'title': '标题', 'content': '内容',
+        'isRead': '是否已读',
+        // 库存统计
+        'total': '设备总数', 'totalValue': '设备总价值', 'categories': '分类明细',
+        'totalEquipment': '设备总数', 'available': '在库-可用', 'pendingRepair': '在库-待维修',
+        'reserved': '在库-已预约', 'borrowed': '借出', 'repairing': '送修',
+        'scrapped': '报废', 'lost': '丢失', 'pendingBorrow': '待审批',
+        'categoryName': '分类名称', 'category': '分类', 'count': '数量', 'value': '价值', 'percentage': '占比', 'categoryCounts': '分类统计',
+        // 状态分布
+        'status': '状态',
+        // 使用率统计
+        'equipmentId': '设备ID', 'assetNo': '资产编号', 'name': '设备名称',
+        'borrowDays': '借用天数', 'totalDays': '总天数', 'usageRate': '使用率',
+        // 借还流水
+        'recordNo': '记录编号', 'equipmentName': '设备名称', 'equipmentAssetNo': '设备资产编号',
+        'borrowerName': '借用人', 'purpose': '用途', 'createTime': '申请时间',
+        'borrowDate': '借出日期', 'expectedReturnDate': '预计归还日期', 'actualReturnDate': '实际归还日期',
+        'verifierName': '验收人', 'returnResult': '验收结果', 'pickupPersonName': '领取人',
+        'mentorApproveTime': '导师审批时间', 'approveTime': '审批时间', 'pickupTime': '领取时间', 'returnConfirmTime': '归还确认时间',
+        // 逾期清单
+        'borrowerPhone': '联系电话', 'overdueDays': '逾期天数', 'overdueWarning': '逾期告警', 'overdueWarningTime': '逾期告警时间',
+        // 故障维修
+        'location': '存放位置', 'repairCount': '维修次数', 'totalRepairDays': '总维修天数',
+        'latestFaultDescription': '最新故障描述', 'latestRepairStatus': '最新维修状态', 'latestReportDate': '报修日期',
+        'latestRepairDuration': '维修时长', 'latestRepairPerson': '维修人员',
+        // 实时库存
+        'model': '型号', 'brand': '品牌', 'responsiblePerson': '责任人', 'price': '价格', 'purchaseDate': '购入日期',
+        // 检定到期
+        'lastCalibrationDate': '上次检定日期', 'nextCalibrationDate': '下次检定日期', 'calibrationPeriodMonths': '检定周期',
+        'daysUntilDue': '距到期天数'
+      };
+
+      const headers = Object.keys(data[0]);
+      const chineseHeaders = headers.map(h => headerMap[h] || h);
+      let csv = '\uFEFF' + chineseHeaders.join(',') + '\n';
+      data.forEach(row => {
+        csv += headers.map(h => {
+          let val = row[h];
+          if (val === null || val === undefined) val = '';
+          if (typeof val === 'object') val = JSON.stringify(val);
+          if (typeof val === 'boolean') val = val ? '是' : '否';
+          return '"' + String(val).replace(/"/g, '""') + '"';
+        }).join(',') + '\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+      link.click();
+    }
+
+    // Initial load
+    loadAssetList();
+  </script>
+</body>
+</html>

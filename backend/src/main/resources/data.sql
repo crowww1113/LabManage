@@ -1,0 +1,3 @@
+-- 当前项目的初始化数据由 DataInitializer.java 负责。
+-- application.yml 中已设置 spring.sql.init.mode=never，因此本文件默认不会执行。
+-- 保留此文件仅用于说明：不要再把历史 SQL 脚本当作当前数据库事实来源。

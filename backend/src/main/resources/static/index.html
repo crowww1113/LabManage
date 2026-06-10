@@ -1,0 +1,5393 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>高校实验室信息管理系统</title>
+  <style>
+    :root {
+      --bg: #eff2f5;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-strong: rgba(255, 255, 255, 0.92);
+      --ink: #181816;
+      --text: #26241f;
+      --muted: #6f6a62;
+      --line: rgba(37, 32, 27, 0.08);
+      --line-strong: rgba(37, 32, 27, 0.14);
+      --shadow: 0 12px 34px rgba(23, 22, 19, 0.06);
+      --radius: 20px;
+      --radius-sm: 14px;
+      --space-1: 8px;
+      --space-2: 12px;
+      --space-3: 16px;
+      --space-4: 20px;
+      --space-5: 28px;
+      --space-6: 36px;
+
+      --perm-color: #2563eb;
+      --teach-color: #16a34a;
+      --venue-color: #f97316;
+      --schedule-color: #8b5cf6;
+      --equipment-color: #0891b2;
+
+      --status-active: #16a34a;
+      --status-disabled: #9ca3af;
+      --status-occupied: #f59e0b;
+      --status-busy: #dc2626;
+
+      --primary: #2563eb;
+      --primary-light: rgba(37, 99, 235, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 30%), linear-gradient(180deg, #f8f6f2 0%, #f1eee8 100%);
+      color: var(--text);
+      letter-spacing: 0.01em;
+      min-height: 100vh;
+      transition: all 0.25s ease;
+    }
+
+    .card,
+    .nav-item,
+    .venue-tab,
+    .calendar-day {
+      transition: all 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(23, 22, 19, 0.09);
+    }
+
+    /* 校历样式 */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .calendar-header {
+      text-align: center;
+      padding: 12px;
+      font-weight: 600;
+      background: var(--panel);
+      border-radius: 8px;
+    }
+
+    .calendar-day {
+      padding: 12px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .calendar-day:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .calendar-day.other-month {
+      opacity: 0.3;
+    }
+
+    .calendar-day.today {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    .calendar-day.holiday {
+      background: #ffebee;
+      border-color: #ffcdd2;
+    }
+
+    .calendar-day.lab-open {
+      background: #fff3e0;
+      border-color: #ffcc80;
+    }
+
+    .calendar-day.weekend {
+      background: #f5f5f5;
+    }
+
+    .calendar-day.exam-week {
+      background: #e3f2fd;
+      border-color: #90caf9;
+    }
+
+    .day-number {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .day-week {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: auto;
+    }
+
+    .day-holiday {
+      font-size: 10px;
+      color: #d32f2f;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .day-exam {
+      font-size: 10px;
+      color: #1976d2;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    .day-lab {
+      font-size: 10px;
+      color: #f57c00;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    .day-event {
+      font-size: 10px;
+      color: #4caf50;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    .calendar-tool {
+      display: flex;
+      gap: 8px;
+    }
+
+    .calendar-tool select {
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-strong);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+    }
+
+    button {
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      transition: all 0.22s ease;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    button::after {
+      content: '';
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(0);
+      opacity: 0;
+      transition: transform 0.6s, opacity 0.4s;
+    }
+
+    button:active::after {
+      transform: scale(4);
+      opacity: 1;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.56);
+      backdrop-filter: blur(18px);
+      color: var(--text);
+      padding: var(--space-5) var(--space-4);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+    }
+
+    .sidebar-header {
+      padding: var(--space-4);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-strong);
+      margin-bottom: var(--space-5);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar-header-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: var(--space-3);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sidebar-header-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-header-user .user-avatar {
+      flex-shrink: 0;
+    }
+
+    .sidebar-header-user .user-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-header-user .logout-btn {
+      flex-shrink: 0;
+    }
+
+    .nav-group {
+      margin: var(--space-5) 0;
+    }
+
+    .nav-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0 10px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-title::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .nav-title.perm-group::before {
+      background: var(--perm-color);
+    }
+
+    .nav-title.teach-group::before {
+      background: var(--teach-color);
+    }
+
+    .nav-title.schedule-group::before {
+      background: var(--schedule-color);
+    }
+
+    .nav-title.venue-group::before {
+      background: var(--venue-color);
+    }
+
+    .nav-title.equipment-group::before {
+      background: var(--equipment-color);
+    }
+
+    .nav-title.perm-group {
+      color: rgba(37, 99, 235, 0.7);
+    }
+
+    .nav-title.teach-group {
+      color: rgba(22, 163, 74, 0.7);
+    }
+
+    .nav-title.schedule-group {
+      color: rgba(139, 92, 246, 0.7);
+    }
+
+    .nav-title.venue-group {
+      color: rgba(249, 115, 22, 0.7);
+    }
+
+    .nav-title.equipment-group {
+      color: rgba(8, 145, 178, 0.7);
+    }
+
+    .nav-item {
+      width: 100%;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: 0.24s ease;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .nav-item.active {
+      background: var(--panel-strong);
+      color: var(--ink);
+      box-shadow: inset 0 0 0 1px var(--line), 0 10px 24px rgba(26, 24, 20, 0.05);
+      transform: translateX(4px);
+    }
+
+    .nav-item.enabled:hover {
+      background: var(--panel-strong);
+      box-shadow: inset 0 0 0 1px var(--line), 0 10px 24px rgba(26, 24, 20, 0.05);
+      transform: translateX(2px);
+    }
+
+    .nav-item.disabled {
+      color: var(--status-disabled);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .status-dot.active {
+      background: var(--status-active);
+    }
+
+    .status-dot.disabled {
+      background: var(--status-disabled);
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      fill: none;
+      flex: 0 0 18px;
+    }
+
+    .main {
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--panel-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--ink);
+      transition: 0.2s;
+    }
+
+    .user-avatar:hover {
+      transform: scale(1.08);
+    }
+
+    .user-details {
+      line-height: 1.4;
+    }
+
+    .user-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .user-role {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      margin-bottom: var(--space-4);
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      animation: pageFade 0.35s ease forwards;
+    }
+
+    @keyframes pageFade {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .no-access {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .no-access svg {
+      width: 48px;
+      height: 48px;
+      stroke: var(--muted);
+      stroke-width: 1.5;
+      fill: none;
+      margin-bottom: 16px;
+    }
+
+    .no-access h3 {
+      font-size: 18px;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .data-table,
+    .venue-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .data-table th,
+    .data-table td,
+    .venue-table th,
+    .venue-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .data-table th,
+    .venue-table th {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .data-table tr:hover,
+    .venue-table tr:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .table-btn,
+    .venue-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: white;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 6px;
+      transition: all 0.2s;
+    }
+
+    .table-btn.primary {
+      background: var(--teach-color);
+      color: white;
+      border-color: var(--teach-color);
+    }
+
+    .venue-btn.primary {
+      background: var(--venue-color);
+      color: white;
+      border-color: var(--venue-color);
+    }
+
+    .table-btn:hover,
+    .venue-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-bar input,
+    .search-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+
+    .search-bar input:focus,
+    .search-bar select:focus {
+      border-color: var(--teach-color);
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+    }
+
+    .form-grid select,
+    .form-input {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-APPROVED { background: #d4edda; color: #155724; }
+    .status-PENDING { background: #fff3cd; color: #856404; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .calendar-day {
+      padding: 12px;
+      border-radius: 8px;
+      background: white;
+      border: 1px solid var(--line);
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .calendar-day:hover {
+      background: var(--panel-strong);
+      transform: scale(1.05);
+    }
+
+    .calendar-day.holiday {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    .calendar-tool {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .venue-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .venue-tab {
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.25s ease;
+    }
+
+    .venue-tab:hover {
+      background: var(--line);
+    }
+
+    .venue-tab.active {
+      background: var(--venue-color);
+      color: white;
+      border-color: var(--venue-color);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+    }
+
+    .venue-panel {
+      display: none;
+    }
+
+    .venue-panel.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* 场馆状态可视化样式 */
+    .building-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin: 20px 0;
+    }
+
+    .floor-section {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+      background: #f8fafc;
+    }
+
+    .floor-header {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .rooms-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    .room-card {
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      min-width: 120px;
+      min-height: 120px;
+    }
+
+    .room-card:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .room-card.room-free {
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      color: #166534;
+      border-color: #22c55e;
+    }
+
+    .room-card.room-occupied {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+
+    .room-card.room-reserved {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1e40af;
+      border-color: #3b82f6;
+    }
+
+    .room-card.room-maintenance {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #b91c1c;
+      border-color: #ef4444;
+    }
+
+    .room-number {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+      text-align: center;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .room-status {
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .room-capacity {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .time-slots-container {
+      margin-top: 8px;
+    }
+
+    .time-slot {
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      margin: 2px 0;
+      border-radius: 6px;
+      font-size: 11px;
+      transition: 0.2s;
+    }
+
+    .time-slot:hover {
+      transform: translateX(2px);
+    }
+
+    .time-slot.slot-free {
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .time-slot.slot-occupied {
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .status-legend {
+      margin: 16px 0;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .legend-color.status-free {
+      background: #dcfce7;
+      border: 1px solid #22c55e;
+    }
+
+    .legend-color.status-occupied {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+    }
+
+    .legend-color.status-reserved {
+      background: #dbeafe;
+      border: 1px solid #3b82f6;
+    }
+
+    .legend-color.status-maintenance {
+      background: #fee2e2;
+      border: 1px solid #ef4444;
+    }
+
+    .room-detail-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .room-detail-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .room-detail-label {
+      font-weight: 600;
+      width: 100px;
+      color: #666;
+    }
+
+    .room-detail-value {
+      flex: 1;
+    }
+
+    .time-slot-info {
+      margin-top: 16px;
+    }
+
+    .time-slot-info h4 {
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .venue-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      padding: 12px 24px;
+      border-radius: 12px;
+      background: #16a34a;
+      color: white;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      z-index: 9999;
+      transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.error {
+      background: #dc2626;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: var(--space-3);
+      }
+
+      .nav-group {
+        margin: var(--space-3) 0;
+      }
+
+      .main {
+        padding: var(--space-3);
+      }
+    }
+
+    @media (max-width: 700px) {
+      .card {
+        padding: var(--space-3);
+      }
+    }
+
+    .btn-click-effect {
+      animation: btnClick 0.22s ease;
+    }
+
+    @keyframes btnClick {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(0.94);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .input-click-effect {
+      animation: inputPulse 0.28s ease;
+    }
+
+    @keyframes inputPulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.15);
+      }
+
+      50% {
+        box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.1);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+      }
+    }
+
+    .tab-click-effect {
+      animation: tabTap 0.24s ease;
+    }
+
+    @keyframes tabTap {
+      0% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-2px);
+      }
+
+      100% {
+        transform: translateY(0);
+      }
+    }
+
+    .room-click-effect {
+      animation: roomBounce 0.26s ease;
+    }
+
+    @keyframes roomBounce {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.09);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: var(--space-4);
+    }
+
+    .col-12 {
+      grid-column: span 12;
+    }
+
+    .col-8 {
+      grid-column: span 8;
+    }
+
+    .col-7 {
+      grid-column: span 7;
+    }
+
+    .col-6 {
+      grid-column: span 6;
+    }
+
+    .col-5 {
+      grid-column: span 5;
+    }
+
+    .col-4 {
+      grid-column: span 4;
+    }
+
+    .col-3 {
+      grid-column: span 3;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+    }
+
+    .stat {
+      padding: 22px;
+      border-radius: var(--radius);
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      color: var(--muted);
+    }
+
+    .stat-icon-wrap,
+    .section-icon-wrap {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(63, 90, 82, 0.08);
+      color: #3f5a52;
+      border: 1px solid rgba(63, 90, 82, 0.08);
+    }
+
+    .stat b {
+      display: block;
+      font-size: 32px;
+      margin: 8px 0 6px;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      color: var(--ink);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .tree {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.48);
+      max-height: 540px;
+      overflow: auto;
+    }
+
+    .tree-node {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--line);
+      box-shadow: 0 6px 18px rgba(23, 22, 19, 0.04);
+    }
+
+    .tree-node-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tree-node-main {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .tree-node-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-xs {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+
+    .org-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      min-height: 100%;
+    }
+
+    .org-form-wrap {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      margin-top: 4px;
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .tree-children {
+      margin-left: 22px;
+      padding-left: 14px;
+      border-left: 1px solid rgba(63, 90, 82, 0.16);
+      margin-top: 10px;
+    }
+
+    .permission-matrix {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .permission-group {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.74);
+    }
+
+    .permission-group h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .permission-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .permission-item input {
+      width: auto;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: var(--space-4);
+    }
+
+    .role-form-panel {
+      background: rgba(255, 255, 255, 0.54);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .subsection-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .subsection-title h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    .role-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .compact-table th,
+    .compact-table td {
+      padding: 10px 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .dot-ok,
+    .dot-warn,
+    .dot-stop {
+      background: #3f5a52;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 16px;
+      background: #fafafa;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.52);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+    }
+
+    .action-cell {
+      width: 160px;
+    }
+
+    .action-buttons {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .action-buttons .btn {
+      min-width: 56px;
+      justify-content: center;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.92;
+    }
+
+    .btn-light {
+      background: var(--panel-strong);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.62);
+      color: var(--muted);
+      margin: 0 8px 8px 0;
+      border: 1px solid var(--line);
+    }
+
+    @media (max-width: 1100px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .permission-matrix {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .col-8,
+      .col-7,
+      .col-6,
+      .col-5,
+      .col-4,
+      .col-3 {
+        grid-column: span 12;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .permission-matrix {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      display: none;
+    }
+
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal.active {
+      display: flex;
+    }
+  </style>
+<script src="/js/common.js"></script>
+</head>
+
+<body>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    // 登录态检查
+    document.addEventListener('DOMContentLoaded', function () {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // 加载用户信息（优先使用 loginUser）
+      let user = JSON.parse(localStorage.getItem('loginUser'));
+      if (!user) {
+        user = JSON.parse(localStorage.getItem('user'));
+      }
+      if (user) {
+        // 兼容不同的用户信息结构
+        const realName = user.realName || user.username || '';
+        const role = user.roleName || user.role || (user.roles && user.roles.length > 0 ? user.roles[0] : '用户');
+        const roles = user.roles || [role];
+
+        document.getElementById('userName').textContent = realName;
+        document.getElementById('userRole').textContent = roles.join(', ');
+        document.getElementById('userAvatar').textContent = realName.charAt(0).toUpperCase();
+      }
+
+      // 退出登录
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          localStorage.clear();
+          window.location.href = '/login.html';
+        });
+      }
+    });
+
+    // 封装带token的fetch请求
+    async function fetchWithToken(url, options = {}) {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+      };
+
+      return fetch(url, {
+        ...options,
+        headers
+      });
+    }
+  </script>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-header-title">高校实验室信息管理系统</div>
+        <div class="sidebar-header-user">
+          <div class="user-avatar" id="userAvatar"></div>
+          <div class="user-details">
+            <div class="user-name" id="userName"></div>
+            <div class="user-role" id="userRole"></div>
+          </div>
+          <button class="logout-btn" id="logoutBtn">退出</button>
+        </div>
+      </div>
+
+      <div class="nav-group" id="perm-group">
+        <div class="nav-title perm-group">权限管理模块</div>
+        <button class="nav-item" id="nav-permissions" data-page="permissions">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z" />
+            <path d="M9.5 12l1.5 1.5 3.5-3.5" />
+          </svg>
+          <span><span class="status-dot" id="dot-permissions"></span>权限模块</span>
+        </button>
+      </div>
+
+      <div class="nav-group" id="teach-group">
+        <div class="nav-title teach-group">教学信息模块</div>
+        <button class="nav-item" id="nav-teach-dashboard" data-page="teach-dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-1.91-.49-3.99-1.09-5.99-1.75v-9.15c1.41.51 2.79 1 4.15 1.41v9.49zm4.37-.57c-1.12-.33-2.21-.7-3.26-1.1V10.25c1.15-.39 2.2-.84 3.15-1.35v9.11c.24.06.48.12.71.18.31.08.61.16.9.23l-.5.2zm4.81-3.25c-.34-.14-.68-.29-1.02-.44V8.05c.34.15.68.3 1.02.45v7.58zM12 6.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5S9.5 10.38 9.5 9s1.12-2.5 2.5-2.5z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-dashboard"></span>系统首页</span>
+        </button>
+        <button class="nav-item" id="nav-teach-course" data-page="teach-course">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-course"></span>课程管理</span>
+        </button>
+        <button class="nav-item" id="nav-teach-calendar" data-page="teach-calendar">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-calendar"></span>学期与校历管理</span>
+        </button>
+        <button class="nav-item" id="nav-teach-major" data-page="teach-major">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+            <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-major"></span>专业与班级管理</span>
+        </button>
+        <button class="nav-item" id="nav-teach-task" data-page="teach-task">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-1.99.9-1.99 2v4c1.1 0 1.99.9 1.99 2s-.89 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-2-1.46c-1.19.69-2 1.99-2 3.46s.81 2.77 2 3.46V18H4v-2.54c1.19-.69 2-1.99 2-3.46 0-1.48-.8-2.77-1.99-3.46L4 6h16v2.54zM11 15h2v2h-2zm0-8h2v6h-2z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-task"></span>教学任务管理</span>
+        </button>
+        <button class="nav-item" id="nav-teach-time" data-page="teach-time">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 12 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+            <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-time"></span>节次时间管理</span>
+        </button>
+        <button class="nav-item" id="nav-exp-task" data-page="exp-task">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+          </svg>
+          <span><span class="status-dot" id="dot-exp-task"></span>实验教学任务管理</span>
+        </button>
+        <button class="nav-item" id="nav-exp-item" data-page="exp-item">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+          </svg>
+          <span><span class="status-dot" id="dot-exp-item"></span>实验项目库管理</span>
+        </button>
+        <button class="nav-item" id="nav-exp-open" data-page="exp-open">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+          </svg>
+          <span><span class="status-dot" id="dot-exp-open"></span>实验项目开出管理</span>
+        </button>
+        <button class="nav-item" id="nav-training-plan" data-page="training-plan">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+          </svg>
+          <span><span class="status-dot" id="dot-training-plan"></span>实训计划管理</span>
+        </button>
+        <button class="nav-item" id="nav-exp-quality" data-page="exp-quality">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+          </svg>
+          <span><span class="status-dot" id="dot-exp-quality"></span>实验教学质量登记</span>
+        </button>
+        <button class="nav-item" id="nav-teach-setting" data-page="teach-setting">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39-0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02 0.64 0.07 0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54 c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44-0.17 0.47-0.41l0.36-2.54c0.59-0.24 1.13-0.56 1.62-0.94l2.39,0.96 c0.22,0.08 0.47,0 0.59-0.22l1.92-3.32c0.12-0.22 0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6 3.6-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z" />
+          </svg>
+          <span><span class="status-dot" id="dot-teach-setting"></span>系统设置</span>
+        </button>
+      </div>
+
+      <div class="nav-group" id="schedule-group">
+        <div class="nav-title schedule-group">排课预约模块</div>
+        <button class="nav-item" id="nav-term-calendar-view" data-page="term-calendar-view">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <span>实验室排课总表</span>
+        </button>
+        <button class="nav-item" id="nav-schedule-reservation" data-page="schedule-reservation">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>集中排课工作台</span>
+        </button>
+        <button class="nav-item" id="nav-schedule-application" data-page="schedule-application">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M8 13h8" />
+            <path d="M8 17h5" />
+            <path d="M8 9h2" />
+          </svg>
+          <span>集中授课排课申请</span>
+        </button>
+        <button class="nav-item" id="nav-usage-record-list" data-page="usage-record-list">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+          <span>实验室使用登记</span>
+        </button>
+        <button class="nav-item" id="nav-schedule-approval-center" data-page="schedule-approval-center">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          <span>排课与预约审批中心</span>
+        </button>
+        <button class="nav-item" id="nav-timetable-matrix" data-page="timetable-matrix">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span>全校课表检索</span>
+        </button>
+        <button class="nav-item" id="nav-schedule-records" data-page="schedule-records">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8z" />
+            <path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
+          </svg>
+          <span>排课记录管理</span>
+        </button>
+        <button class="nav-item" id="nav-schedule-logs" data-page="schedule-logs">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M12 20h9" /><path d="M16.5 3.5c-.83-.83-2.17-.83-3 0L5 12l-2 6 6-2 8.5-8.5c.83-.83.83-2.17 0-3z" />
+          </svg>
+          <span>排课操作日志</span>
+        </button>
+        <button class="nav-item" id="nav-statistics-reports" data-page="statistics-reports">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M3 3v18h18" /><path d="M7 16l4-8 4 5 5-9" />
+          </svg>
+          <span>排课数据统计</span>
+        </button>
+        <button class="nav-item" id="nav-statistics-dashboard" data-page="statistics-dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span>排课数据大屏</span>
+        </button>
+      </div>
+
+      <div class="nav-group" id="venue-group">
+        <div class="nav-title venue-group">场馆信息模块</div>
+        <button class="nav-item" id="nav-venue-manage" data-page="venue-manage">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+          </svg>
+          <span><span class="status-dot" id="dot-venue-manage"></span>场馆信息管理</span>
+        </button>
+        <button class="nav-item" id="nav-venue-status" data-page="venue-status">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path
+              d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2V9h-2V7h4v10z" />
+          </svg>
+          <span><span class="status-dot" id="dot-venue-status"></span>场馆状态可视化</span>
+        </button>
+      </div>
+
+      <div class="nav-group" id="equipment-group">
+        <div class="nav-title equipment-group">设备管理模块</div>
+        <button class="nav-item" id="nav-equipment-manage" data-page="equipment-manage">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4z"/>
+          </svg>
+          <span><span class="status-dot" id="dot-equipment-manage"></span>实验室设备管理</span>
+        </button>
+        <button class="nav-item" id="nav-equipment-borrow" data-page="equipment-borrow">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 14H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V6h10v2z"/>
+          </svg>
+          <span><span class="status-dot" id="dot-equipment-borrow"></span>设备借还管理</span>
+        </button>
+        <button class="nav-item" id="nav-inventory-monitor" data-page="inventory-monitor">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+          </svg>
+          <span><span class="status-dot" id="dot-inventory-monitor"></span>库存与监控</span>
+        </button>
+        <button class="nav-item" id="nav-general-rules" data-page="general-rules">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <span><span class="status-dot" id="dot-general-rules"></span>通用规则</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <section class="page" id="page-permissions">
+        <div class="grid">
+          <div class="card col-12">
+            <div class="org-panel">
+              <div class="section-title" style="margin-bottom:0;">
+                <h3>组织架构管理</h3>
+                <span class="tag">组织结构配置</span>
+              </div>
+              <div>
+                <div class="helper-text">支持多级组织维护，可直接在树上对节点进行修改或删除。</div>
+                <div class="tree" id="orgTree" style="margin-top:10px;"></div>
+              </div>
+              <div class="org-form-wrap">
+                <form id="orgForm">
+                  <input type="hidden" name="id" />
+                  <div class="form-grid">
+                    <div>
+                      <label>组织编码</label>
+                      <input name="code" placeholder="如：SCI-CS-01" required />
+                    </div>
+                    <div>
+                      <label>组织名称</label>
+                      <input name="name" placeholder="如：计算机学院" required />
+                    </div>
+                    <div>
+                      <label>组织层级</label>
+                      <select name="level" required>
+                        <option value="校级">校级</option>
+                        <option value="院级">院级</option>
+                        <option value="中心级">中心级</option>
+                        <option value="实验室级">实验室级</option>
+                        <option value="课题组级">课题组级</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>上级组织</label>
+                      <select name="parentId" id="orgParentSelect"></select>
+                    </div>
+                    <div>
+                      <label>负责人</label>
+                      <input name="leader" placeholder="负责人姓名" />
+                    </div>
+                    <div>
+                      <label>状态</label>
+                      <select name="status">
+                        <option value="启用">启用</option>
+                        <option value="停用">停用</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="margin-top: 12px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" type="submit" id="orgSubmitBtn">新增组织节点</button>
+                    <button class="btn btn-light" type="button" id="orgCancelBtn">取消编辑</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="card col-12">
+            <div class="section-title">
+              <h3>用户管理</h3>
+              <span class="tag">多角色用户管理</span>
+            </div>
+
+            <div class="split" style="grid-template-columns: 1fr 1fr; align-items: start;">
+              <div>
+                <div class="toolbar">
+                  <input id="userSearch" placeholder="搜索姓名 / 账号 / 组织名称" />
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>账号</th>
+                      <th>姓名</th>
+                      <th>组织</th>
+                      <th>角色</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userTableBody"></tbody>
+                </table>
+              </div>
+
+              <div>
+                <form id="userForm">
+                  <input type="hidden" name="id" />
+                  <div class="form-grid">
+                    <div>
+                      <label>登录账号</label>
+                      <input name="username" placeholder="如：admin" required />
+                    </div>
+                    <div>
+                      <label>姓名</label>
+                      <input name="realName" placeholder="姓名" required />
+                    </div>
+                    <div>
+                      <label>所属组织</label>
+                      <select name="orgId" id="userOrgSelect" required></select>
+                    </div>
+                    <div>
+                      <label>岗位</label>
+                      <input name="position" placeholder="如：实验员 / 教师 / 学生" />
+                    </div>
+                    <div>
+                      <label>职工号/学号</label>
+                      <input name="jobNo" placeholder="编号" />
+                    </div>
+                    <div>
+                      <label>账号状态</label>
+                      <select name="status">
+                        <option value="启用">启用</option>
+                        <option value="禁用">禁用</option>
+                      </select>
+                    </div>
+                    <div class="full">
+                      <label>分配角色</label>
+                      <div id="userRoleSelector" class="permission-matrix"></div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 12px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" type="submit" id="userSubmitBtn">新增用户</button>
+                    <button class="btn btn-light" type="button" id="userCancelBtn">取消编辑</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="card col-12">
+            <div class="section-title">
+              <h3>角色权限配置</h3>
+              <span class="tag">角色权限</span>
+            </div>
+
+            <div class="role-stack">
+              <div class="table-wrap">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>角色名称</th>
+                      <th>角色编码</th>
+                      <th>上级角色</th>
+                      <th>层级</th>
+                      <th>数据范围</th>
+                      <th>组织限制</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roleTableBody"></tbody>
+                </table>
+              </div>
+
+              <div class="role-form-panel">
+                <div class="subsection-title">
+                  <h4>角色编辑区</h4>
+                </div>
+                <form id="roleForm">
+                  <input type="hidden" name="id" />
+                  <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div>
+                      <label>角色编码</label>
+                      <input name="code" placeholder="如：LAB_ADMIN" required />
+                    </div>
+                    <div>
+                      <label>角色名称</label>
+                      <input name="name" placeholder="如：实验室管理员" required />
+                    </div>
+                    <div>
+                      <label>上级角色</label>
+                      <select name="parentRoleId" id="roleParentSelect"></select>
+                    </div>
+                    <div>
+                      <label>数据权限范围</label>
+                      <select name="dataScope">
+                        <option value="全部数据">全部数据</option>
+                        <option value="本校数据">本校数据</option>
+                        <option value="本院系数据">本院系数据</option>
+                        <option value="本组织及下级">本组织及下级</option>
+                        <option value="仅本人数据">仅本人数据</option>
+                        <option value="自定义组织">自定义组织</option>
+                      </select>
+                    </div>
+                    <div style="grid-column: span 2;">
+                      <label>限定组织</label>
+                      <select name="orgLimit" id="roleOrgSelect"></select>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 16px;">
+                    <div class="subsection-title" style="margin-bottom:10px;">
+                      <h4 style="font-size:15px;">权限点配置</h4>
+                    </div>
+                    <div id="permissionMatrix" class="permission-matrix"></div>
+                  </div>
+
+                  <div style="margin-top: 14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                    <button class="btn btn-light" type="button" id="roleCancelBtn">取消编辑</button>
+                    <button class="btn btn-primary" type="submit" id="roleSubmitBtn">新增角色</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="card col-12">
+            <div class="section-title">
+              <h3>权限字典管理</h3>
+              <span class="tag">模块 / 操作类型 / 权限点 CRUD</span>
+            </div>
+
+            <div class="split">
+              <div>
+                <div class="toolbar">
+                  <input id="permissionSearch" placeholder="搜索模块 / 权限名称 / 操作类型" />
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>模块</th>
+                      <th>权限名称</th>
+                      <th>操作类型</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="permissionTableBody"></tbody>
+                </table>
+              </div>
+
+              <div>
+                <form id="permissionForm">
+                  <input type="hidden" name="id" />
+                  <div class="form-grid">
+                    <div>
+                      <label>所属模块</label>
+                      <input name="module" placeholder="如：预约管理" required />
+                    </div>
+                    <div>
+                      <label>权限名称</label>
+                      <input name="name" placeholder="如：审核预约" required />
+                    </div>
+                    <div>
+                      <label>操作类型</label>
+                      <select name="action" required>
+                        <option value="查询">查询</option>
+                        <option value="新增">新增</option>
+                        <option value="修改">修改</option>
+                        <option value="删除">删除</option>
+                        <option value="审核">审核</option>
+                        <option value="导出">导出</option>
+                        <option value="指派">指派</option>
+                        <option value="自定义">自定义</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>状态</label>
+                      <select name="status">
+                        <option value="启用">启用</option>
+                        <option value="停用">停用</option>
+                      </select>
+                    </div>
+                    <div class="full">
+                      <label>权限说明</label>
+                      <textarea name="description" placeholder="说明该权限控制的菜单、按钮或业务动作"></textarea>
+                    </div>
+                  </div>
+                  <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" type="submit" id="permissionSubmitBtn">新增权限</button>
+                    <button class="btn btn-light" type="button" id="permissionCancelBtn">取消编辑</button>
+                  </div>
+                </form>
+                <div class="footer-note">
+                  可按模块、按操作类型自定义权限点；角色勾选的是当前权限字典中的实时数据，新增、编辑、删除权限后会同步反映到角色授权区。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page active" id="page-teach-dashboard">
+        <div class="card">
+          <h3>教学系统首页</h3>
+          <div class="search-bar">
+            <button class="table-btn primary" onclick="showAddCoursePanel()">新增课程</button>
+          </div>
+
+          <div id="teachHomePanel"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0;">
+            <div
+              style="padding: 16px; background: var(--panel-strong); border-radius: 12px; border: 1px solid var(--line);">
+              <h4 style="margin:0 0 8px;">本学期课程总数</h4>
+              <h2 id="courseTotalCount" style="margin:0; color: var(--teach-color);">128</h2>
+            </div>
+            <div
+              style="padding: 16px; background: var(--panel-strong); border-radius: 12px; border: 1px solid var(--line);">
+              <h4 style="margin:0 0 8px;">班级总数</h4>
+              <h2 style="margin:0; color: var(--teach-color);">46</h2>
+            </div>
+            <div
+              style="padding: 16px; background: var(--panel-strong); border-radius: 12px; border: 1px solid var(--line);">
+              <h4 style="margin:0 0 8px;">教师人数</h4>
+              <h2 style="margin:0; color: var(--teach-color);">89</h2>
+            </div>
+            <div
+              style="padding: 16px; background: var(--panel-strong); border-radius: 12px; border: 1px solid var(--line);">
+              <h4 style="margin:0 0 8px;">学生人数</h4>
+              <h2 style="margin:0; color: var(--teach-color);">1862</h2>
+            </div>
+          </div>
+
+          <div id="addCoursePanel" style="display:none; margin-top:20px;">
+            <h4>新增课程</h4>
+            <div class="form-grid">
+              <div><label>课程名称</label><input type="text" id="homeCourseName"></div>
+              <div><label>课程学分</label><input type="number" id="homeCourseCredit"></div>
+            </div>
+            <button class="table-btn primary" style="margin-top:10px;" onclick="saveHomeCourse()">保存课程</button>
+          </div>
+
+
+          <div style="margin-top: 20px;">
+            <h4>本周校历</h4>
+            <div style="padding:16px; background:white; border-radius:12px; border:1px solid var(--line);">
+              <p>第8周 | 2025-10-20 ~ 2025-10-26</p>
+              <p style="color:red;">提醒：10月25日 重阳节（节假日）</p>
+            </div>
+          </div>
+          <div style="margin-top: 20px;">
+            <h4>待办事项</h4>
+            <div style="padding:16px; background:#fffbeb; border-radius:12px; border:1px solid #f59e0b;">
+              <p>⚠️ 有3门课程未分配教学任务，请尽快处理</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-teach-course">
+        <div class="card">
+          <h3>课程管理</h3>
+          <div class="search-bar">
+            <input placeholder="搜索课程名称/编号" style="flex:1;" id="courseSearch" oninput="renderTeachCourse()">
+            <select id="courseTermSelect" onchange="renderTeachCourse()"></select>
+            <select id="courseTypeSelect" onchange="renderTeachCourse()"></select>
+            <button class="table-btn primary" onclick="addTeachCourse()">新增课程</button>
+          </div>
+          <table class="data-table" id="teachCourseTable">
+            <thead>
+              <tr>
+                <th>课程编号</th>
+                <th>中文名称</th>
+                <th>英文名称</th>
+                <th>修读性质</th>
+                <th>学分</th>
+                <th>总学时</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="courseTableBody"></tbody>
+          </table>
+          <form id="teachCourseForm" class="form-grid" style="margin-top:30px;">
+            <input type="hidden" id="courseId">
+            <input type="hidden" id="courseCode">
+            <div class="form-group">
+              <label>中文课程名称</label>
+              <input type="text" id="courseCnName" placeholder="必填" required>
+            </div>
+            <div class="form-group">
+              <label>英文课程名称</label>
+              <input type="text" id="courseEnName" placeholder="必填" required>
+            </div>
+            <div class="form-group">
+              <label>修读性质</label>
+              <select id="courseType"></select>
+            </div>
+            <div class="form-group">
+              <label>学分</label>
+              <input type="number" id="courseCredit" required>
+            </div>
+            <div class="form-group">
+              <label>总学时</label>
+              <input type="number" id="courseTotalHour" required>
+            </div>
+            <div class="form-group">
+              <label>讲授学时</label>
+              <input type="number" id="courseTeachHour">
+            </div>
+            <div class="form-group">
+              <label>实践学时</label>
+              <input type="number" id="coursePracticeHour">
+            </div>
+            <div class="form-group">
+              <label>实验学时</label>
+              <input type="number" id="courseLabHour">
+            </div>
+            <div class="form-group">
+              <label>网络学时</label>
+              <input type="number" id="courseNetHour">
+            </div>
+            <div class="form-group">
+              <label>授课学期</label>
+              <select id="courseTerm"></select>
+            </div>
+          </form>
+          <div style="margin-top:20px;">
+            <button class="table-btn primary" onclick="saveTeachCourse()">保存</button>
+            <button class="table-btn" onclick="resetTeachCourseForm()">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-teach-major">
+        <div class="card">
+          <h3>专业与班级管理</h3>
+          <div class="venue-tabs">
+            <div class="venue-tab active" onclick="switchMajorTab('major')">专业管理</div>
+            <div class="venue-tab" onclick="switchMajorTab('class')">班级管理</div>
+          </div>
+          <div class="venue-panel active" id="panel-major">
+            <div class="search-bar">
+              <input placeholder="搜索专业" id="majorSearch" oninput="renderMajorTable()">
+              <button class="table-btn primary" onclick="addMajor()">新增专业</button>
+            </div>
+            <table class="data-table" id="majorTable">
+              <thead>
+                <tr>
+                  <th>专业编号</th>
+                  <th>专业名称</th>
+                  <th>部门ID</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="majorTableBody"></tbody>
+            </table>
+          </div>
+          <div class="venue-panel" id="panel-class">
+            <div class="search-bar">
+              <input placeholder="搜索班级" id="classSearch" oninput="renderClassTable()">
+              <input placeholder="输入年级" id="classGradeSelect" oninput="renderClassTable()">
+            </div>
+            <table class="data-table" id="classTable">
+              <thead>
+                <tr>
+                  <th>班级编号</th>
+                  <th>班级名称</th>
+                  <th>所属专业</th>
+                  <th>年级</th>
+                  <th>班主任</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="classTableBody"></tbody>
+            </table>
+            <form id="classForm" class="form-grid" style="margin-top:20px;">
+              <input type="hidden" id="classId">
+              <input type="hidden" id="classCode">
+              <div class="form-group">
+                <label>班级名称</label>
+                <input type="text" id="className" required>
+              </div>
+              <div class="form-group">
+                <label>所属专业</label>
+                <select id="classMajor"></select>
+              </div>
+              <div class="form-group">
+                <label>年级</label>
+                <input type="text" id="classGrade" required>
+              </div>
+              <div class="form-group">
+                <label>班主任</label>
+                <select id="classTeacher"></select>
+              </div>
+              <div class="form-group">
+                <label>班级管理员</label>
+                <select id="classManager"></select>
+              </div>
+              <div class="form-group">
+                <label>学院</label>
+                <select id="classDeptId"></select>
+              </div>
+            </form>
+            <div style="margin-top:20px;">
+              <button class="table-btn primary" onclick="saveClass()">保存</button>
+              <button class="table-btn" onclick="resetClassForm()">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 专业编辑弹窗 -->
+        <div class="modal" id="majorModal">
+          <div class="modal-content">
+            <h3 id="majorModalTitle">新增专业</h3>
+            <div class="form-grid" style="margin:16px 0;">
+              <input type="hidden" id="majorId">
+              <div>
+                <label>专业编号</label>
+                <input type="text" id="majorCode" placeholder="例如：M003" required>
+              </div>
+              <div>
+                <label>专业名称</label>
+                <input type="text" id="majorName" required>
+              </div>
+              <div>
+                <label>学院</label>
+                <select id="majorDeptId"></select>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button class="table-btn" onclick="closeMajorModal()">取消</button>
+              <button class="table-btn primary" onclick="saveMajor()">保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-teach-task">
+        <div class="card">
+          <h3>教学任务管理</h3>
+          <div class="search-bar">
+            <select id="taskTermFilter" onchange="renderTaskTable()">
+              <option value="">全部学期</option>
+            </select>
+            <select id="taskClassFilter" onchange="renderTaskTable()">
+              <option value="">全部班级</option>
+            </select>
+            <button class="table-btn primary" onclick="addTask()">新增任务</button>
+          </div>
+          <table class="data-table" id="taskTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>学期</th>
+                <th>班级</th>
+                <th>课程</th>
+                <th>授课教师</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="taskTableBody"></tbody>
+          </table>
+          <form id="taskForm" class="form-grid" style="margin-top:20px;">
+            <input type="hidden" id="taskId">
+            <div class="form-group">
+              <label>学期</label>
+              <select id="taskTerm" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label>班级</label>
+              <select id="taskClass" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label>课程</label>
+              <select id="taskCourse" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label>授课教师</label>
+              <select id="taskTeachers" class="form-input"></select>
+            </div>
+          </form>
+          <div style="margin-top:20px;">
+            <button class="table-btn primary" onclick="saveTask()">保存</button>
+            <button class="table-btn" onclick="resetTaskForm()">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-teach-time">
+        <div class="card">
+          <h3>节次时间管理</h3>
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <button class="table-btn primary" onclick="addTimeSlot()">新增节次</button>
+            <button class="table-btn" onclick="initTimeSlots()">初始化默认节次</button>
+          </div>
+          <table class="data-table" id="timeTable">
+            <thead>
+              <tr>
+                <th>排序</th>
+                <th>节次名称</th>
+                <th>开始时间</th>
+                <th>结束时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="timeTableBody"></tbody>
+          </table>
+        </div>
+        <!-- 节次新增/编辑弹窗 -->
+        <div class="modal" id="timeSlotModal">
+          <div class="modal-content" style="max-width:420px;">
+            <h3 id="timeSlotModalTitle">新增节次</h3>
+            <div class="form-grid" style="margin:16px 0;">
+              <input type="hidden" id="timeSlotId">
+              <div>
+                <label>节次名称</label>
+                <input type="text" id="timeSlotName" placeholder="如：1-2节" required>
+              </div>
+              <div>
+                <label>开始时间</label>
+                <input type="time" id="timeSlotStart" required>
+              </div>
+              <div>
+                <label>结束时间</label>
+                <input type="time" id="timeSlotEnd" required>
+              </div>
+              <div>
+                <label>排序</label>
+                <input type="number" id="timeSlotSort" min="1" placeholder="如：1">
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button class="table-btn" onclick="closeTimeSlotModal()">取消</button>
+              <button class="table-btn primary" onclick="saveTimeSlot()">保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-schedule-application">
+        <iframe id="iframe-schedule-application" src="schedule-application.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-schedule-reservation">
+        <iframe id="iframe-schedule-reservation" src="schedule-reservation.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-term-calendar-view">
+        <iframe id="iframe-term-calendar-view" src="term-calendar-view.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-usage-record-list">
+        <iframe id="iframe-usage-record-list" src="usage-record-list.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-schedule-approval-center">
+        <iframe id="iframe-schedule-approval-center" src="schedule-approval-center.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-timetable-matrix">
+        <iframe id="iframe-timetable-matrix" src="timetable-matrix.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-schedule-records">
+        <iframe id="iframe-schedule-records" src="schedule-records.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-schedule-logs">
+        <iframe id="iframe-schedule-logs" src="schedule-logs.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-statistics-reports">
+        <iframe id="iframe-statistics-reports" src="statistics-reports.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-statistics-dashboard">
+        <iframe id="iframe-statistics-dashboard" src="statistics-dashboard.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-exp-task">
+        <iframe id="iframe-exp-task" src="exp-task.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-exp-item">
+        <iframe id="iframe-exp-item" src="exp-item.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-exp-open">
+        <iframe id="iframe-exp-open" src="exp-open.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-training-plan">
+        <iframe id="iframe-training-plan" src="training-plan.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-exp-quality">
+        <iframe id="iframe-exp-quality" src="exp-quality.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-teach-setting">
+        <div class="card">
+          <h3>系统设置</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>系统名称</label><input type="text" value="高校实验室信息管理系统"></div>
+            <div class="form-group"><label>默认学期</label><input type="text" value="2025-2026第一学期"></div>
+            <div class="form-group"><label>自动备份</label><select>
+                <option>开启</option>
+                <option>关闭</option>
+              </select></div>
+            <div class="form-group"><label>日志保留天数</label><input type="number" value="90"></div>
+          </div>
+          <div style="margin-top:20px;">
+            <button class="table-btn primary" onclick="showToast('系统设置保存成功')">保存设置</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-teach-calendar">
+        <div class="card">
+          <div class="section-title">
+            <h3>学期设置</h3>
+          </div>
+          <div class="form-grid">
+            <div>
+              <label>选择学期</label>
+              <select id="termSelect" onchange="selectTerm(this.value)"></select>
+            </div>
+            <div>
+              <label>学期名称</label>
+              <input type="text" id="termName" readonly />
+            </div>
+            <div>
+              <label>开始日期</label>
+              <input type="date" id="startDate" readonly />
+            </div>
+            <div>
+              <label>结束日期</label>
+              <input type="date" id="endDate" readonly />
+            </div>
+            <div>
+              <label>总周数</label>
+              <input type="number" id="totalWeeks" readonly />
+            </div>
+            <div>
+              <label>操作</label>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="showEditTermModal()"
+                  style="flex: 1; padding: 4px 8px; font-size: 12px;">编辑学期</button>
+                <button class="btn btn-light" onclick="deleteTerm()"
+                  style="flex: 1; padding: 4px 8px; font-size: 12px;">删除学期</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>校历视图</h3>
+            <div class="calendar-tool">
+              <select id="yearSelect" onchange="loadYearCalendar()">
+                <option value="2025">2025年</option>
+                <option value="2026">2026年</option>
+                <option value="2027">2027年</option>
+              </select>
+              <select id="monthSelect" onchange="loadYearCalendar()">
+                <option value="0">1月</option>
+                <option value="1">2月</option>
+                <option value="2">3月</option>
+                <option value="3">4月</option>
+                <option value="4">5月</option>
+                <option value="5">6月</option>
+                <option value="6">7月</option>
+                <option value="7">8月</option>
+                <option value="8">9月</option>
+                <option value="9">10月</option>
+                <option value="10">11月</option>
+                <option value="11">12月</option>
+              </select>
+            </div>
+          </div>
+          <div id="calendarContainer">
+            <div class="calendar-grid">
+              <div class="calendar-header">日</div>
+              <div class="calendar-header">一</div>
+              <div class="calendar-header">二</div>
+              <div class="calendar-header">三</div>
+              <div class="calendar-header">四</div>
+              <div class="calendar-header">五</div>
+              <div class="calendar-header">六</div>
+              <!-- 日历内容将通过JavaScript动态生成 -->
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>日期详情</h3>
+          </div>
+          <div id="dateDetails"
+            style="padding: 20px; background: var(--panel-strong); border-radius: 12px; border: 1px solid var(--line);">
+            <p style="color: var(--muted);">点击日历上的日期查看详情</p>
+          </div>
+        </div>
+
+        <!-- 新增/编辑学期弹窗 -->
+        <div class="modal" id="termModal">
+          <div class="modal-content" style="width: 600px; max-width: 90%;">
+            <h3 id="termModalTitle">新增学期</h3>
+            <div class="form-grid" style="margin:16px 0;">
+              <input type="hidden" id="termId">
+              <div>
+                <label>学期名称</label>
+                <input type="text" id="modalTermName" placeholder="如：2025-2026学年第一学期" required>
+              </div>
+              <div>
+                <label>开始日期</label>
+                <input type="date" id="modalStartDate" required>
+              </div>
+              <div>
+                <label>结束日期</label>
+                <input type="date" id="modalEndDate" required>
+              </div>
+              <div>
+                <label>节假日日期</label>
+                <input type="text" id="modalHolidays" placeholder="如：2025-10-01,2025-10-02">
+              </div>
+              <div>
+                <label>实验室开放日</label>
+                <input type="text" id="modalLabOpenDays" placeholder="如：2025-09-01,2025-09-02">
+              </div>
+
+              <!-- 教学节点 -->
+              <div>
+                <label>选课开始</label>
+                <input type="date" id="modalCourseSelectStart">
+              </div>
+              <div>
+                <label>退补选开始</label>
+                <input type="date" id="modalCourseAdjustStart">
+              </div>
+              <div>
+                <label>期中考试开始</label>
+                <input type="date" id="modalMidtermStart">
+              </div>
+              <div>
+                <label>期末考试开始</label>
+                <input type="date" id="modalFinalStart">
+              </div>
+              <div>
+                <label>补考开始</label>
+                <input type="date" id="modalMakeupStart">
+              </div>
+              <div>
+                <label>论文答辩截止</label>
+                <input type="date" id="modalThesisDeadline">
+              </div>
+
+              <!-- 重要节点 -->
+              <div>
+                <label>军训开始</label>
+                <input type="date" id="modalMilitaryStart">
+              </div>
+              <div>
+                <label>运动会日期</label>
+                <input type="date" id="modalSportsDay">
+              </div>
+              <div>
+                <label>校庆日期</label>
+                <input type="date" id="modalAnniversary">
+              </div>
+              <div>
+                <label>毕业季开始</label>
+                <input type="date" id="modalGraduationStart">
+              </div>
+              <div>
+                <label>招生季开始</label>
+                <input type="date" id="modalEnrollmentStart">
+              </div>
+
+              <!-- 管理与服务信息 -->
+              <div>
+                <label>教职工培训开始</label>
+                <input type="date" id="modalStaffTrainingStart">
+              </div>
+              <div>
+                <label>学生体检开始</label>
+                <input type="date" id="modalPhysicalStart">
+              </div>
+              <div>
+                <label>安全教育日期</label>
+                <input type="date" id="modalSafetyEducation">
+              </div>
+
+              <!-- 校园活动 -->
+              <div>
+                <label>招聘会日期</label>
+                <input type="date" id="modalJobFair">
+              </div>
+              <div>
+                <label>校园开放日</label>
+                <input type="date" id="modalCampusOpenDay">
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button class="table-btn" onclick="closeTermModal()">取消</button>
+              <button class="table-btn primary" onclick="saveTerm()">保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-venue-manage">
+        <div class="card">
+          <h3>场馆信息管理</h3>
+          <div class="venue-tabs">
+            <div class="venue-tab active" onclick="switchVenueTab('campus')">校区管理</div>
+            <div class="venue-tab" onclick="switchVenueTab('building')">楼宇管理</div>
+            <div class="venue-tab" onclick="switchVenueTab('room')">房间管理</div>
+          </div>
+          <div class="venue-panel active" id="panel-campus">
+            <button class="venue-btn primary" onclick="addCampus()">新增校区</button>
+            <table class="venue-table" id="campusTable">
+              <thead>
+                <tr>
+                  <th>校区ID</th>
+                  <th>校区名称</th>
+                  <th>详细地址</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="campusTableBody"></tbody>
+            </table>
+          </div>
+          <div class="venue-panel" id="panel-building">
+            <button class="venue-btn primary" onclick="addBuilding()">新增楼宇</button>
+            <table class="venue-table" id="buildingTable">
+              <thead>
+                <tr>
+                  <th>楼宇ID</th>
+                  <th>所属校区</th>
+                  <th>楼宇名称</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="buildingTableBody"></tbody>
+            </table>
+          </div>
+          <div class="venue-panel" id="panel-room">
+            <button class="venue-btn primary" onclick="addRoom()">新增房间</button>
+            <form id="roomForm" class="venue-form">
+              <input type="hidden" id="roomId">
+              <div class="form-group">
+                <label>所属楼宇</label>
+                <select id="roomBuilding" required><option value="">请选择楼宇</option></select>
+              </div>
+              <div class="form-group">
+                <label>楼层</label>
+                <input type="number" id="roomFloor" placeholder="输入楼层" required>
+              </div>
+              <div class="form-group">
+                <label>房间号</label>
+                <input type="text" id="roomCode" placeholder="如：101" required>
+              </div>
+              <div class="form-group">
+                <label>座位数</label>
+                <input type="number" id="roomSeats" placeholder="座位数量" required>
+              </div>
+              <div class="form-group">
+                <label>面积(㎡)</label>
+                <input type="number" id="roomArea" placeholder="房间面积" step="0.1">
+              </div>
+              <div class="form-group">
+                <label>房间介绍</label>
+                <input type="text" id="roomIntro" placeholder="功能介绍">
+              </div>
+            </form>
+            <div style="margin-top:20px;">
+              <button class="venue-btn primary" onclick="saveRoom()">保存房间</button>
+              <button class="venue-btn" onclick="resetRoomForm()">取消</button>
+            </div>
+            <table class="venue-table" style="margin-top:20px;" id="roomTable">
+              <thead>
+                <tr>
+                  <th>房间号</th>
+                  <th>所属楼宇</th>
+                  <th>楼层</th>
+                  <th>座位数</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="roomTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-venue-status">
+        <div class="card">
+          <h3>场馆状态可视化</h3>
+          <p>实时展示楼层房间使用状态与当日时段占用情况</p>
+          <div style="margin:16px 0; display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
+            <div>
+              <label>选择楼宇：</label>
+              <select class="venue-btn" style="margin-left:8px;" id="viewBuildingSelect"
+                onchange="refreshVenueStatus()">
+                <option>实验大楼</option>
+                <option>理工楼</option>
+                <option>文科楼</option>
+              </select>
+            </div>
+            <div>
+              <label>选择楼层：</label>
+              <select class="venue-btn" style="margin-left:8px;" id="viewFloorSelect" onchange="refreshVenueStatus()">
+                <option>1层</option>
+                <option>2层</option>
+                <option>3层</option>
+              </select>
+            </div>
+            <div>
+              <label>状态筛选：</label>
+              <select class="venue-btn" style="margin-left:8px;" id="viewStatusSelect" onchange="refreshVenueStatus()">
+                <option value="all">全部状态</option>
+                <option value="free">空闲</option>
+                <option value="occupied">占用</option>
+                <option value="reserved">预约</option>
+                <option value="maintenance">维修</option>
+              </select>
+            </div>
+            <div>
+              <label>房间类型：</label>
+              <select class="venue-btn" style="margin-left:8px;" id="viewTypeSelect" onchange="refreshVenueStatus()">
+                <option value="all">全部类型</option>
+                <option value="lab">实验室</option>
+                <option value="classroom">教室</option>
+                <option value="meeting">会议室</option>
+              </select>
+            </div>
+            <div style="margin-left: auto;">
+              <button class="venue-btn primary" onclick="refreshVenueStatus()">刷新状态</button>
+            </div>
+          </div>
+
+          <!-- 状态图例 -->
+          <div class="status-legend" style="margin: 16px 0; display: flex; gap: 20px; flex-wrap: wrap;">
+            <div class="legend-item">
+              <div class="legend-color status-free"></div>
+              <span>空闲</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color status-occupied"></div>
+              <span>占用</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color status-reserved"></div>
+              <span>预约</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color status-maintenance"></div>
+              <span>维修</span>
+            </div>
+          </div>
+
+          <div class="building-container" id="buildingContainer">
+            <!-- 楼层将通过JavaScript动态生成 -->
+          </div>
+
+          <!-- 房间详情弹窗 -->
+          <div class="modal" id="roomDetailModal">
+            <div class="modal-content" style="width: 400px; max-width: 90%;">
+              <h3 id="roomDetailTitle">房间详情</h3>
+              <div id="roomDetailContent" style="margin: 16px 0;">
+                <!-- 详情将通过JavaScript动态生成 -->
+              </div>
+              <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="table-btn" onclick="closeRoomDetailModal()">关闭</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-equipment-manage">
+        <iframe id="iframe-equipment-manage" src="equipment-manage.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-equipment-borrow">
+        <iframe id="iframe-equipment-borrow" src="equipment-borrow.html?t=2026052733"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <!-- 库存与监控 -->
+      <section class="page" id="page-inventory-monitor">
+        <iframe id="iframe-inventory-monitor" src="inventory-monitor.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <!-- 通用规则 -->
+      <section class="page" id="page-general-rules">
+        <iframe id="iframe-general-rules" src="general-rules.html"
+          style="width:100%;height:100%;border:none;display:block;"></iframe>
+      </section>
+
+      <section class="page" id="page-no-access">
+        <div class="no-access">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-1.91-.49-3.99-1.09-5.99-1.75v-9.15c1.41.51 2.79 1 4.15 1.41v9.49zm4.37-.57c-1.12-.33-2.21-.7-3.26-1.1V10.25c1.15-.39 2.2-.84 3.15-1.35v9.11c.24.06.48.12.71.18.31.08.61.16.9.23l-.5.2zm4.81-3.25c-.34-.14-.68-.29-1.02-.44V8.05c.34.15.68.3 1.02.45v7.58zM12 6.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5S9.5 10.38 9.5 9s1.12-2.5 2.5-2.5z" />
+          </svg>
+          <h3>无访问权限</h3>
+          <p>当前账号无权限访问该模块，请联系管理员获取权限</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let loginUser = null;
+    const userStr = localStorage.getItem('loginUser');
+
+    // 1. 先尝试读取本地存储的登录信息
+    if (userStr && userStr !== 'null' && userStr !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(userStr);
+        // 校验：必须有真实姓名和角色名，才是有效登录
+        if (parsedUser && parsedUser.realName && parsedUser.roleName) {
+          loginUser = parsedUser;
+        } else {
+          loginUser = null;
+        }
+      } catch (e) {
+        loginUser = null;
+      }
+    }
+
+    // 2. 如果没有 loginUser，尝试从 user 字段读取（兼容 login.html 存储的格式）
+    if (!loginUser) {
+      const userStr2 = localStorage.getItem('user');
+      if (userStr2 && userStr2 !== 'null' && userStr2 !== 'undefined') {
+        try {
+          const parsedUser = JSON.parse(userStr2);
+          if (parsedUser && parsedUser.realName && (parsedUser.role || parsedUser.roles)) {
+            loginUser = {
+              username: parsedUser.username,
+              realName: parsedUser.realName,
+              roleName: parsedUser.role || (parsedUser.roles && parsedUser.roles.length > 0 ? parsedUser.roles[0] : '用户'),
+              role: parsedUser.role,
+              roles: parsedUser.roles
+            };
+          }
+        } catch (e) {
+          loginUser = null;
+        }
+      }
+    }
+
+    // 3. 如果还是没有，检查 auth_token 并从 localStorage 读取
+    if (!loginUser) {
+      const token = localStorage.getItem('auth_token');
+      if (token && token.startsWith('token_')) {
+        const username = token.substring(6);
+        let userRole = '学生';
+        let realName = username;
+
+        // 根据用户名判断角色
+        if (username === 'admin') {
+          userRole = '超级管理员';
+          realName = '超级管理员';
+        } else if (username === 'lab_wang') {
+          userRole = '实验室管理员';
+          realName = '王老师';
+        } else if (username === 'teacher_liu') {
+          userRole = '教师';
+          realName = '刘老师';
+        } else if (username === 'stu_chen') {
+          userRole = '学生';
+          realName = '陈同学';
+        }
+
+        loginUser = {
+          username: username,
+          realName: realName,
+          roleName: userRole,
+          role: userRole,
+          roles: [userRole]
+        };
+      }
+    }
+
+    // 角色归一化：提取标准角色码，统一中文显示名
+    if (loginUser && loginUser.roleName) {
+      const raw = loginUser.roleName;
+      const codeMap = {
+        '实验管理员': 'LAB_ADMIN', '实验室管理员': 'LAB_ADMIN', 'LAB_ADMIN': 'LAB_ADMIN',
+        '授课教师': 'TEACHER', 'TEACHER': 'TEACHER',
+        '学生/其他用户': 'STUDENT', 'STUDENT': 'STUDENT',
+        '超级管理员': 'LAB_ADMIN', '管理员': 'LAB_ADMIN', '教师': 'TEACHER', '学生': 'STUDENT'
+      };
+      loginUser.roleCode = codeMap[raw] || 'STUDENT';
+      const nameMap = { 'LAB_ADMIN': '实验管理员', 'TEACHER': '授课教师', 'STUDENT': '学生' };
+      loginUser.roleName = nameMap[loginUser.roleCode];
+    }
+
+    // 存入本地存储，让系统认为你已登录
+    if (loginUser) {
+      localStorage.setItem('loginUser', JSON.stringify(loginUser));
+    }
+
+    // 通用请求函数，自动携带Token
+    async function fetchWithToken(url, options = {}) {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const defaultHeaders = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...defaultHeaders,
+          ...options.headers,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.clear();
+        window.location.href = '/login.html';
+        throw new Error('未授权，跳转到登录页');
+      }
+
+      return response;
+    }
+
+    const DEFAULT_TIME_SLOTS = [
+      { id: 1, name: '上午第一节', start: '08:00', end: '08:45' },
+      { id: 2, name: '上午第二节', start: '09:00', end: '09:45' },
+      { id: 3, name: '下午第一节', start: '14:00', end: '14:45' },
+      { id: 4, name: '下午第二节', start: '15:00', end: '15:45' }
+    ];
+
+    async function loadTeachCourses() {
+      try {
+        const res = await fetchWithToken('/api/teach/courses');
+        state.teachCourses = await res.json();
+      } catch (e) {
+        console.error('加载课程列表失败', e);
+        state.teachCourses = [];
+      }
+      renderTeachCourse();
+    }
+
+    async function loadCourseTerms() {
+      try {
+        const res = await fetchWithToken('/api/terms');
+        const terms = await res.json();
+        const opts = [{ value: 'all', text: '全部学期' }];
+        terms.forEach(t => opts.push({ value: t.termName, text: t.termName }));
+        ['courseTermSelect', 'courseTerm'].forEach(id => {
+          const sel = document.getElementById(id);
+          if (!sel) return;
+          sel.innerHTML = '';
+          opts.forEach(o => {
+            const opt = document.createElement('option');
+            if (o.value !== undefined) opt.value = o.value;
+            opt.textContent = o.text;
+            sel.appendChild(opt);
+          });
+        });
+      } catch (e) {
+        console.error('加载学期列表失败', e);
+      }
+    }
+
+    const STORAGE_KEY = 'lab-manage-prototype-v1';
+    const defaultData = {
+      permissions: [
+        { id: 1, module: '用户权限', name: '查看用户', action: '查询', code: 'user:view', description: '查看用户列表与详情', status: '启用' },
+        { id: 2, module: '用户权限', name: '新增用户', action: '新增', code: 'user:create', description: '新增系统用户', status: '启用' },
+        { id: 3, module: '用户权限', name: '编辑用户', action: '修改', code: 'user:edit', description: '编辑用户资料', status: '启用' },
+        { id: 4, module: '用户权限', name: '删除用户', action: '删除', code: 'user:delete', description: '删除用户账号', status: '启用' },
+        { id: 5, module: '用户权限', name: '分配角色', action: '修改', code: 'role:assign', description: '为用户绑定角色', status: '启用' },
+        { id: 6, module: '用户权限', name: '维护组织', action: '修改', code: 'org:manage', description: '维护组织架构', status: '启用' },
+        { id: 7, module: '实验室管理', name: '查看实验室', action: '查询', code: 'lab:view', description: '查看实验室信息', status: '启用' },
+        { id: 8, module: '实验室管理', name: '新增实验室', action: '新增', code: 'lab:create', description: '新增实验室档案', status: '启用' },
+        { id: 9, module: '实验室管理', name: '编辑实验室', action: '修改', code: 'lab:edit', description: '编辑实验室资料', status: '启用' },
+        { id: 10, module: '实验室管理', name: '停用实验室', action: '删除', code: 'lab:disable', description: '停用实验室', status: '启用' },
+        { id: 11, module: '实验室管理', name: '导出实验室', action: '导出', code: 'lab:export', description: '导出实验室数据', status: '启用' },
+        { id: 12, module: '设备管理', name: '查看设备', action: '查询', code: 'device:view', description: '查看设备列表', status: '启用' },
+        { id: 13, module: '设备管理', name: '新增设备', action: '新增', code: 'device:create', description: '新增设备', status: '启用' },
+        { id: 14, module: '设备管理', name: '编辑设备', action: '修改', code: 'device:edit', description: '编辑设备资料', status: '启用' },
+        { id: 15, module: '设备管理', name: '设备报修', action: '审核', code: 'device:repair', description: '提交或处理设备报修', status: '启用' },
+        { id: 16, module: '设备管理', name: '设备维保', action: '修改', code: 'device:maintain', description: '维护维保记录', status: '启用' },
+        { id: 17, module: '预约管理', name: '查看预约', action: '查询', code: 'booking:view', description: '查看预约列表', status: '启用' },
+        { id: 18, module: '预约管理', name: '新增预约', action: '新增', code: 'booking:create', description: '发起预约', status: '启用' },
+        { id: 19, module: '预约管理', name: '审核预约', action: '审核', code: 'booking:audit', description: '审核预约申请', status: '启用' },
+        { id: 20, module: '预约管理', name: '取消预约', action: '删除', code: 'booking:cancel', description: '取消预约', status: '启用' },
+        { id: 21, module: '报修管理', name: '查看报修', action: '查询', code: 'repair:view', description: '查看报修单', status: '启用' },
+        { id: 22, module: '报修管理', name: '新增报修', action: '新增', code: 'repair:create', description: '提交报修', status: '启用' },
+        { id: 23, module: '报修管理', name: '指派维修', action: '指派', code: 'repair:assign', description: '指派维修人员', status: '启用' },
+        { id: 24, module: '报修管理', name: '完成报修', action: '修改', code: 'repair:finish', description: '关闭报修流程', status: '启用' },
+        { id: 25, module: '统计查询', name: '查看统计', action: '查询', code: 'stats:view', description: '查看统计图表', status: '启用' },
+        { id: 26, module: '统计查询', name: '导出统计', action: '导出', code: 'stats:export', description: '导出统计结果', status: '启用' }
+      ],
+      orgs: [],
+      roles: [],
+      users: [
+        { id: 1, username: 'admin', realName: '实验管理员', password: 'admin123', orgId: 1, position: '信息化管理员', jobNo: 'A0001', status: '启用', roleIds: [1] },
+        { id: 2, username: 'lab_wang', realName: '王实验员', password: 'lab123456', orgId: 4, position: '实验室管理员', jobNo: 'T1023', status: '启用', roleIds: [1] },
+        { id: 3, username: 'teacher_liu', realName: '刘老师', password: 'teacher123', orgId: 2, position: '教师', jobNo: 'T2026', status: '启用', roleIds: [2] },
+        { id: 4, username: 'stu_chen', realName: '陈同学', password: 'student123', orgId: 5, position: '研究生', jobNo: 'S3101', status: '启用', roleIds: [3] }
+      ],
+      classes: [],
+      tasks: [],
+    };
+
+    function normalizeState(data) {
+      const base = JSON.parse(JSON.stringify(defaultData));
+      const input = (data && typeof data === 'object') ? data : {};
+      const ensureArray = (value, fallback) => Array.isArray(value) ? value : fallback;
+      return {
+        ...base, ...input,
+        permissions: ensureArray(input.permissions, base.permissions),
+        users: ensureArray(input.users, base.users),
+        teachCourses: ensureArray(input.teachCourses, []),
+        majors: ensureArray(input.majors, []),
+        classes: ensureArray(input.classes, []),
+        tasks: ensureArray(input.tasks, base.tasks)
+      };
+    }
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const s = raw ? normalizeState(JSON.parse(raw)) : normalizeState(defaultData);
+      s.orgs = [];
+      s.roles = [];
+      if (!s.timeSlots) s.timeSlots = DEFAULT_TIME_SLOTS;
+      return s;
+    }
+    let state = loadState();
+    let editingPermissionId = null, editingRoleId = null, editingOrgId = null, editingUserId = null;
+    const USER_API_BASE = '/api/users';
+    const ROLE_API_BASE = '/api/roles';
+    const ORG_API_BASE = '/api/orgs';
+    let userSearchTimer = null;
+
+    function login(username, password) {
+      const user = state.users.find(u => u.username === username && u.password === password);
+      if (!user) {
+        return { success: false, msg: '账号或密码错误' };
+      }
+      const role = state.roles.find(r => r.id === user.roleIds[0]);
+      const loginInfo = {
+        id: user.id,
+        username: user.username,
+        realName: user.realName,
+        roleName: role ? role.name : '用户',
+        roleCode: role ? role.code : 'STUDENT',
+        orgId: user.orgId
+      };
+      localStorage.setItem('loginUser', JSON.stringify(loginInfo));
+      return { success: true, data: loginInfo };
+    }
+
+    function getRoleName(id) { const r = state.roles.find(x => x.id == id); return r ? r.name : '-'; }
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function getOrgName(id) { const o = state.orgs.find(x => x.id == id); return o ? o.name : '-'; }
+    function getRoleNames(ids) { return (ids || []).map(id => getRoleName(id)).filter(Boolean).join('、') || '-'; }
+
+    async function extractErrorMessage(response, fallback) {
+      try {
+        const text = await response.text();
+        if (!text) return fallback;
+        try {
+          const data = JSON.parse(text);
+          return data.message || data.error || fallback;
+        } catch (_) {
+          return text;
+        }
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast ' + (isError ? 'error' : '');
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    async function fetchRoles() {
+      try {
+        const res = await fetchWithToken(ROLE_API_BASE);
+        if (res.ok) { state.roles = await res.json(); renderRoleTable(); fillRoleParentSelect(); renderUserRoleSelector(); renderStats(); }
+      } catch (e) { console.error("加载角色失败", e); }
+    }
+    async function fetchOrgs() {
+      try {
+        const res = await fetchWithToken(ORG_API_BASE);
+        if (res.ok) { state.orgs = await res.json(); renderOrgTree(); fillOrgSelects(); renderStats(); }
+      } catch (e) { console.error("加载组织失败", e); }
+    }
+    function renderStats() {
+      const el = (id) => document.getElementById(id);
+      if (el('statOrgCount')) el('statOrgCount').textContent = state.orgs.length;
+      if (el('statUserCount')) el('statUserCount').textContent = state.users.length;
+      if (el('statRoleCount')) el('statRoleCount').textContent = state.roles.length;
+      if (el('statPermissionCount')) el('statPermissionCount').textContent = state.permissions.length;
+    }
+
+    function buildOrgTree(pid = '') {
+      const nodes = state.orgs.filter(o => String(o.parentId || '') === String(pid));
+      if (!nodes.length) return '';
+      return nodes.map(n => {
+        const c = n.status === '启用' ? 'dot-ok' : 'dot-stop';
+        return `
+        <div class="tree-node">
+          <div class="tree-node-head">
+            <div class="tree-node-main">
+              <div><span class="status-dot ${c}"></span><b>${n.name}</b> <span class="muted">(${n.level})</span></div>
+              <div class="muted" style="font-size:12px;margin-top:6px;">编码：${n.code} | 负责人：${n.leader || '-'} | ${n.status}</div>
+            </div>
+            <div class="tree-node-actions">
+              <button class="btn btn-light btn-xs org-edit" data-id="${n.id}">修改</button>
+              <button class="btn btn-light btn-xs org-delete" data-id="${n.id}">删除</button>
+            </div>
+          </div>
+          ${buildOrgTree(n.id) ? `<div class="tree-children">${buildOrgTree(n.id)}</div>` : ''}
+        </div>
+      `;
+      }).join('');
+    }
+    function renderOrgTree() {
+      const html = buildOrgTree('');
+      document.getElementById('orgTree').innerHTML = html || '<div class="empty">暂无组织</div>';
+      document.querySelectorAll('.org-edit').forEach(b => b.onclick = () => startEditOrg(+b.dataset.id));
+      document.querySelectorAll('.org-delete').forEach(b => b.onclick = () => deleteOrg(+b.dataset.id));
+    }
+      async function deleteOrg(id) {
+        if (state.orgs.some(o => o.parentId === id)) {
+          showToast("该组织存在子节点，无法删除", true);
+          return;
+        }
+        if (!confirm("确定删除该组织？")) return;
+        try {
+          const res = await fetchWithToken(ORG_API_BASE + "/" + id, { method: "DELETE" });
+          if (!res.ok) throw new Error(await extractErrorMessage(res, "组织删除失败"));
+          showToast("组织删除成功");
+          await fetchOrgs();
+        } catch (e) { showToast(e.message || "组织删除失败", true); }
+      }
+
+    function fillOrgSelects() {
+      const opts = [`<option value="">顶级</option>`].concat(state.orgs.map(o => `<option value="${o.id}">${o.name}(${o.level})</option>`));
+      document.getElementById('orgParentSelect').innerHTML = opts.join('');
+      document.getElementById('userOrgSelect').innerHTML = state.orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+      document.getElementById('roleOrgSelect').innerHTML = `<option value="">不限</option>` + state.orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+    }
+    function fillRoleParentSelect() {
+      document.getElementById('roleParentSelect').innerHTML = `<option value="">顶级</option>` + state.roles.map(r => `<option value="${r.id}">${'— '.repeat((r.level || 1) - 1)}${r.name}</option>`).join('');
+    }
+    function renderUserRoleSelector() {
+      document.getElementById('userRoleSelector').innerHTML = state.roles.map(r => `
+      <label class="permission-item" style="padding:12px;border:1px solid var(--line);border-radius:14px;">
+        <input type="radio" name="roleId" value="${r.id}">
+        <span><b>${r.name}</b><br><small class="muted">${r.dataScope}</small></span>
+      </label>
+    `).join('');
+    }
+
+    async function fetchUsers(f = '') {
+      const keyword = (f || '').trim();
+      const query = keyword ? `?keyword=${encodeURIComponent(keyword)}` : '';
+      const response = await fetchWithToken(`${USER_API_BASE}${query}`);
+      if (!response.ok) {
+        const message = await extractErrorMessage(response, '加载用户列表失败');
+        throw new Error(message);
+      }
+      state.users = await response.json();
+    }
+    function renderUsers() {
+      const b = document.getElementById('userTableBody');
+      b.innerHTML = state.users.map(u => `
+      <tr>
+        <td>${u.username}</td><td>${u.realName}<div class="muted">${u.position || '-'}</div></td>
+        <td>${getOrgName(u.orgId)}</td><td>${getRoleNames(u.roleIds)}</td>
+        <td><span class="tag">${u.status}</span></td>
+        <td class="action-cell">
+          <div class="action-buttons">
+            <button class="btn btn-light btn-xs user-edit" data-id="${u.id}">编辑</button>
+            <button class="btn btn-light btn-xs user-delete" data-id="${u.id}">删除</button>
+          </div>
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan=6><div class="empty">无数据</div></td></tr>`;
+      document.querySelectorAll('.user-edit').forEach(b => b.onclick = () => startEditUser(+b.dataset.id));
+      document.querySelectorAll('.user-delete').forEach(b => b.onclick = async () => {
+        if (!confirm('确定删除该用户？')) return;
+        try {
+          const response = await fetchWithToken(`${USER_API_BASE}/${b.dataset.id}`, { method: 'DELETE' });
+          if (!response.ok) {
+            throw new Error(await extractErrorMessage(response, '用户删除失败'));
+          }
+          showToast('用户删除成功');
+          await loadAndRenderUsers(document.getElementById('userSearch')?.value || '');
+          if (editingUserId === +b.dataset.id) {
+            resetUserForm();
+          }
+        } catch (error) {
+          showToast(error.message || '用户删除失败', true);
+        }
+      });
+    }
+    async function loadAndRenderUsers(f = '') {
+      await fetchUsers(f);
+      renderUsers();
+      renderStats();
+    }
+
+    function renderRoleTable() {
+      document.getElementById('roleTableBody').innerHTML = state.roles.map(r => `
+      <tr>
+        <td>${r.name}</td><td>${r.code}</td><td>${getRoleName(r.parentRoleId) || '顶级'}</td>
+        <td>Lv.${r.level || 1}</td><td>${r.dataScope}</td><td>${getOrgName(r.orgLimit) || '不限'}</td>
+        <td class="action-cell">
+          <div class="action-buttons">
+            <button class="btn btn-light btn-xs role-edit" data-id="${r.id}">编辑</button>
+            <button class="btn btn-light btn-xs role-delete" data-id="${r.id}">删除</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+      document.querySelectorAll('.role-edit').forEach(b => b.onclick = () => startEditRole(+b.dataset.id));
+      document.querySelectorAll('.role-delete').forEach(b => b.onclick = () => deleteRole(+b.dataset.id));
+    }
+    function renderPermissionMatrix() {
+      const g = state.permissions.reduce((a, p) => { if (!a[p.module]) a[p.module] = []; a[p.module].push(p); return a; }, {});
+      document.getElementById('permissionMatrix').innerHTML = Object.entries(g).map(([m, ps]) => `
+      <div class="permission-group"><h4>${m}</h4>${ps.map(p => `
+        <label class="permission-item"><input type="checkbox" name="permissions" value="${p.code}"><span>${p.name} (${p.action})</span></label>
+      `).join('')}</div>
+    `).join('');
+    }
+      async function deleteRole(id) {
+        if (state.roles.some(r => r.parentRoleId === id)) {
+          showToast("该角色存在子角色，无法删除", true);
+          return;
+        }
+        if (!confirm("确定删除该角色？")) return;
+        try {
+          const res = await fetchWithToken(ROLE_API_BASE + "/" + id, { method: "DELETE" });
+          if (!res.ok) throw new Error(await extractErrorMessage(res, "角色删除失败"));
+          showToast("角色删除成功");
+          await fetchRoles();
+        } catch (e) { showToast(e.message || "角色删除失败", true); }
+      }
+
+    function renderPermissionTable(f = '') {
+      const k = (f || '').toLowerCase();
+      const list = state.permissions.filter(p => `${p.module}${p.name}${p.action}`.toLowerCase().includes(k));
+      document.getElementById('permissionTableBody').innerHTML = list.map(p => `
+      <tr>
+        <td>${p.module}</td><td>${p.name}<div class="muted">${p.description || '-'}</div></td>
+        <td>${p.action}</td><td>${p.status}</td>
+        <td class="action-cell">
+          <div class="action-buttons">
+            <button class="btn btn-light btn-xs perm-edit" data-id="${p.id}">编辑</button>
+            <button class="btn btn-light btn-xs perm-delete" data-id="${p.id}">删除</button>
+          </div>
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan=5><div class="empty">无数据</div></td></tr>`;
+      document.querySelectorAll('.perm-edit').forEach(b => b.onclick = () => startEditPermission(+b.dataset.id));
+      document.querySelectorAll('.perm-delete').forEach(b => b.onclick = () => deletePermission(+b.dataset.id));
+    }
+    function deletePermission(id) {
+      if (!confirm('确定删除该权限？')) return;
+      state.permissions = state.permissions.filter(p => p.id !== id);
+      renderPermissionTable();
+      renderPermissionMatrix();
+      renderStats();
+      showToast('权限删除成功');
+    }
+
+    function startEditPermission(id) {
+      const p = state.permissions.find(x => x.id == id);
+      if (!p) return;
+      editingPermissionId = id;
+      const f = document.getElementById('permissionForm');
+      f.id.value = p.id;
+      f.module.value = p.module;
+      f.name.value = p.name;
+      f.action.value = p.action;
+      f.status.value = p.status;
+      f.description.value = p.description || '';
+      document.getElementById('permissionSubmitBtn').textContent = '保存权限';
+    }
+    function resetPermissionForm() {
+      editingPermissionId = null;
+      document.getElementById('permissionForm').reset();
+      document.getElementById('permissionSubmitBtn').textContent = '新增权限';
+    }
+    function startEditOrg(id) {
+      const o = state.orgs.find(x => x.id == id);
+      if (!o) return;
+      editingOrgId = id;
+      const f = document.getElementById('orgForm');
+      f.id.value = o.id;
+      f.code.value = o.code;
+      f.name.value = o.name;
+      f.level.value = o.level;
+      f.parentId.value = o.parentId || '';
+      f.leader.value = o.leader || '';
+      f.status.value = o.status;
+      document.getElementById('orgSubmitBtn').textContent = '保存组织';
+    }
+    function resetOrgForm() {
+      editingOrgId = null;
+      document.getElementById('orgForm').reset();
+      document.getElementById('orgSubmitBtn').textContent = '新增组织';
+    }
+    async function startEditUser(id) {
+      const response = await fetchWithToken(`${USER_API_BASE}/${id}`);
+      if (!response.ok) {
+        throw new Error(await extractErrorMessage(response, '加载用户详情失败'));
+      }
+      const u = await response.json();
+      editingUserId = id;
+      const f = document.getElementById('userForm');
+      f.id.value = u.id;
+      f.username.value = u.username;
+      f.realName.value = u.realName;
+      f.orgId.value = u.orgId;
+      f.position.value = u.position || '';
+      f.jobNo.value = u.jobNo || '';
+      f.status.value = u.status;
+
+      document.querySelectorAll('#userRoleSelector input[name="roleId"]').forEach(cb => {
+        cb.checked = (u.roleIds || []).includes(+cb.value);
+      });
+      document.getElementById('userSubmitBtn').textContent = '保存用户';
+    }
+    function resetUserForm() {
+      editingUserId = null;
+      document.getElementById('userForm').reset();
+      document.getElementById('userSubmitBtn').textContent = '新增用户';
+    }
+    function startEditRole(id) {
+      const r = state.roles.find(x => x.id == id);
+      if (!r) return;
+      editingRoleId = id;
+      const f = document.getElementById('roleForm');
+      f.id.value = r.id;
+      f.code.value = r.code;
+      f.name.value = r.name;
+      f.parentRoleId.value = r.parentRoleId || '';
+      f.dataScope.value = r.dataScope;
+      f.orgLimit.value = r.orgLimit || '';
+
+      document.querySelectorAll('#permissionMatrix input').forEach(cb => {
+        cb.checked = (r.permissions || []).includes(cb.value);
+      });
+      document.getElementById('roleSubmitBtn').textContent = '保存角色';
+    }
+    function resetRoleForm() {
+      editingRoleId = null;
+      document.getElementById('roleForm').reset();
+      document.getElementById('roleSubmitBtn').textContent = '新增角色';
+    }
+
+    document.getElementById('permissionForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const f = e.target;
+      const data = {
+        module: f.module.value,
+        name: f.name.value,
+        action: f.action.value,
+        status: f.status.value,
+        description: f.description.value,
+        code: `${f.module.value}:${f.action.value}`.replace(/\s+/g, '_')
+      };
+      if (editingPermissionId) {
+        const idx = state.permissions.findIndex(x => x.id === editingPermissionId);
+        if (idx >= 0) state.permissions[idx] = { ...state.permissions[idx], ...data };
+        showToast('权限修改成功');
+      } else {
+        const newId = state.permissions.length ? Math.max(...state.permissions.map(x => x.id)) + 1 : 1;
+        state.permissions.push({ id: newId, ...data });
+        showToast('权限新增成功');
+      }
+      renderPermissionTable();
+      renderPermissionMatrix();
+      renderStats();
+      resetPermissionForm();
+    });
+
+      document.getElementById('orgForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const f = e.target;
+        const data = {
+          code: f.code.value,
+          name: f.name.value,
+          level: f.level.value,
+          parentId: f.parentId.value || null,
+          leader: f.leader.value,
+          status: f.status.value
+        };
+        const isEdit = Boolean(editingOrgId);
+        const url = isEdit ? ORG_API_BASE + "/" + editingOrgId : ORG_API_BASE;
+        const method = isEdit ? "PUT" : "POST";
+        try {
+          const res = await fetchWithToken(url, { method, body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await extractErrorMessage(res, isEdit ? "组织修改失败" : "组织新增失败"));
+          showToast(isEdit ? "组织修改成功" : "组织新增成功");
+          await fetchOrgs();
+          resetOrgForm();
+        } catch (e) { showToast(e.message || (isEdit ? "组织修改失败" : "组织新增失败"), true); }
+      });
+
+    document.getElementById('userForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target;
+      const roleId = document.querySelector('#userRoleSelector input[name="roleId"]:checked');
+      const data = {
+        username: f.username.value.trim(),
+        realName: f.realName.value.trim(),
+        orgId: +f.orgId.value,
+        position: f.position.value.trim(),
+        jobNo: f.jobNo.value.trim(),
+        status: f.status.value,
+        roleIds: roleId ? [+roleId.value] : []
+      };
+
+      const isEdit = Boolean(editingUserId);
+      const url = isEdit ? `${USER_API_BASE}/${editingUserId}` : USER_API_BASE;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetchWithToken(url, {
+          method,
+          body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, isEdit ? '用户修改失败' : '用户新增失败'));
+        }
+        showToast(isEdit ? '用户修改成功' : '用户新增成功');
+        await loadAndRenderUsers(document.getElementById('userSearch')?.value || '');
+        resetUserForm();
+      } catch (error) {
+        showToast(error.message || (isEdit ? '用户修改失败' : '用户新增失败'), true);
+      }
+    });
+
+      document.getElementById('roleForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const f = e.target;
+        const permissions = Array.from(document.querySelectorAll("#permissionMatrix input:checked")).map(cb => cb.value);
+        const parentId = f.parentRoleId.value ? +f.parentRoleId.value : null;
+        const data = {
+          code: f.code.value,
+          name: f.name.value,
+          parentRoleId: parentId,
+          dataScope: f.dataScope.value,
+          orgLimit: f.orgLimit.value || null,
+          permissions
+        };
+        const isEdit = Boolean(editingRoleId);
+        const url = isEdit ? ROLE_API_BASE + "/" + editingRoleId : ROLE_API_BASE;
+        const method = isEdit ? "PUT" : "POST";
+        try {
+          const res = await fetchWithToken(url, { method, body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await extractErrorMessage(res, isEdit ? "角色修改失败" : "角色新增失败"));
+          showToast(isEdit ? "角色修改成功" : "角色新增成功");
+          await fetchRoles();
+          resetRoleForm();
+        } catch (e) { showToast(e.message || (isEdit ? "角色修改失败" : "角色新增失败"), true); }
+      });
+
+    document.getElementById('permissionCancelBtn').onclick = resetPermissionForm;
+    document.getElementById('orgCancelBtn').onclick = resetOrgForm;
+    document.getElementById('userCancelBtn').onclick = resetUserForm;
+    document.getElementById('roleCancelBtn').onclick = resetRoleForm;
+
+    document.getElementById('userSearch').addEventListener('input', e => {
+      clearTimeout(userSearchTimer);
+      userSearchTimer = setTimeout(() => loadAndRenderUsers(e.target.value), 300);
+    });
+    document.getElementById('permissionSearch').addEventListener('input', e => {
+      renderPermissionTable(e.target.value);
+    });
+
+    // 教学模块 - 课程管理
+    function renderTeachCourse() {
+      const key = (document.getElementById('courseSearch')?.value || '').toLowerCase();
+      const term = document.getElementById('courseTermSelect')?.value || 'all';
+      const type = document.getElementById('courseTypeSelect')?.value || 'all';
+      let list = state.teachCourses;
+      if (term !== 'all') list = list.filter(c => c.term === term);
+      if (type !== 'all') list = list.filter(c => c.type === type);
+      if (key) list = list.filter(c => c.cnName.toLowerCase().includes(key) || c.code.includes(key));
+      document.getElementById('courseTableBody').innerHTML = list.map(c => `
+      <tr>
+        <td>${c.code}</td>
+        <td>${c.cnName}</td>
+        <td>${c.enName}</td>
+        <td>${c.type}</td>
+        <td>${c.credit}</td>
+        <td>${c.totalHour}</td>
+        <td>
+          <button class="table-btn" onclick="editTeachCourse(${c.id})">编辑</button>
+          <button class="table-btn" onclick="deleteTeachCourse(${c.id})">删除</button>
+        </td>
+      </tr>
+    `).join('');
+    }
+
+    function addTeachCourse() {
+      resetTeachCourseForm();
+      showToast('请填写课程信息');
+    }
+
+    function editTeachCourse(id) {
+      const c = state.teachCourses.find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('courseId').value = c.id;
+      document.getElementById('courseCode').value = c.code || '';
+      document.getElementById('courseCnName').value = c.cnName;
+      document.getElementById('courseEnName').value = c.enName;
+      document.getElementById('courseType').value = c.type;
+      document.getElementById('courseCredit').value = c.credit;
+      document.getElementById('courseTotalHour').value = c.totalHour;
+      document.getElementById('courseTeachHour').value = c.teachHour;
+      document.getElementById('coursePracticeHour').value = c.practiceHour;
+      document.getElementById('courseLabHour').value = c.labHour;
+      document.getElementById('courseNetHour').value = c.netHour;
+      document.getElementById('courseTerm').value = c.term;
+    }
+
+    async function saveTeachCourse() {
+      const id = document.getElementById('courseId').value;
+      const data = {
+        code: document.getElementById('courseCode').value || null,
+        cnName: document.getElementById('courseCnName').value,
+        enName: document.getElementById('courseEnName').value,
+        type: document.getElementById('courseType').value,
+        credit: +document.getElementById('courseCredit').value,
+        totalHour: +document.getElementById('courseTotalHour').value,
+        teachHour: +document.getElementById('courseTeachHour').value,
+        practiceHour: +document.getElementById('coursePracticeHour').value,
+        labHour: +document.getElementById('courseLabHour').value,
+        netHour: +document.getElementById('courseNetHour').value,
+        term: document.getElementById('courseTerm').value
+      };
+      try {
+        if (id) {
+          await fetchWithToken(`/api/teach/courses/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+          showToast('课程修改成功');
+        } else {
+          await fetchWithToken('/api/teach/courses', { method: 'POST', body: JSON.stringify(data) });
+          showToast('课程新增成功');
+        }
+        await loadTeachCourses();
+        resetTeachCourseForm();
+      } catch (e) {
+        showToast('操作失败：' + e.message);
+      }
+    }
+
+    function resetTeachCourseForm() {
+      document.getElementById('teachCourseForm').reset();
+      document.getElementById('courseId').value = '';
+    }
+
+    async function deleteTeachCourse(id) {
+      if (!confirm('确定删除该课程？')) return;
+      try {
+        await fetchWithToken(`/api/teach/courses/${id}`, { method: 'DELETE' });
+        showToast('课程已删除');
+        await loadTeachCourses();
+      } catch (e) {
+        showToast('删除失败：' + e.message);
+      }
+    }
+
+    // 专业班级
+    function switchMajorTab(tab) {
+      document.querySelectorAll('.venue-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.venue-panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(`panel-${tab}`).classList.add('active');
+    }
+
+    async function loadMajors() {
+      try {
+        const res = await fetchWithToken('/api/majors');
+        state.majors = await res.json();
+      populateMajorSelect();
+      } catch (e) {
+        console.error('加载专业列表失败', e);
+        state.majors = [];
+      }
+      renderMajorTable();
+    }
+
+    async function loadClazzes() {
+      try {
+        const res = await fetchWithToken('/api/clazzes');
+        state.classes = await res.json();
+      populateUserSelects();
+      } catch (e) {
+        console.error('加载班级列表失败', e);
+        state.classes = [];
+      }
+      renderClassTable();
+    }
+
+    function renderMajorTable() {
+      const key = (document.getElementById('majorSearch').value || '').toLowerCase();
+      const list = state.majors.filter(m =>
+        (m.majorName || '').toLowerCase().includes(key) || (m.majorCode || '').toLowerCase().includes(key)
+      );
+      document.getElementById('majorTableBody').innerHTML = list.map(m => `
+      <tr>
+        <td>${m.majorCode || '-'}</td>
+        <td>${m.majorName || '-'}</td>
+        <td>${getOrgName(m.deptId) || '-'}</td>
+        <td>
+          <button class="table-btn" onclick="editMajor(${m.id})">编辑</button>
+          <button class="table-btn" onclick="deleteMajor(${m.id})">删除</button>
+        </td>
+      </tr>
+    `).join('');
+    }
+    // 专业管理 - 弹窗版
+    function addMajor() {
+      resetMajorForm();
+      document.getElementById('majorModalTitle').innerText = "新增专业";
+      document.getElementById('majorModal').classList.add('active');
+    }
+    function editMajor(id) {
+      const m = state.majors.find(x => x.id === id);
+      if (!m) return;
+      document.getElementById('majorId').value = m.id;
+      document.getElementById('majorCode').value = m.majorCode || '';
+      document.getElementById('majorName').value = m.majorName || '';
+      document.getElementById('majorDeptId').value = m.deptId ?? '';
+      document.getElementById('majorModalTitle').innerText = "编辑专业";
+      document.getElementById('majorModal').classList.add('active');
+    }
+    async function saveMajor() {
+      const id = document.getElementById('majorId').value;
+      const majorCode = document.getElementById('majorCode').value.trim();
+      const majorName = document.getElementById('majorName').value.trim();
+      const deptId = Number(document.getElementById('majorDeptId').value);
+      if (!majorCode || !majorName || !deptId) {
+        showToast("编号、名称和学院不能为空", true);
+        return;
+      }
+      const data = { majorCode, majorName, deptId };
+      try {
+        if (id) {
+          await fetchWithToken(`/api/majors/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+          showToast('专业修改成功');
+        } else {
+          await fetchWithToken('/api/majors', { method: 'POST', body: JSON.stringify(data) });
+          showToast('专业新增成功');
+        }
+        await loadMajors();
+        closeMajorModal();
+      } catch (e) {
+        showToast('操作失败：' + e.message, true);
+      }
+    }
+    function resetMajorForm() {
+      document.getElementById('majorId').value = '';
+      document.getElementById('majorCode').value = '';
+      document.getElementById('majorName').value = '';
+      document.getElementById('majorDeptId').value = '';
+    }
+    function closeMajorModal() {
+      document.getElementById('majorModal').classList.remove('active');
+    }
+    async function deleteMajor(id) {
+      if (!confirm('确定删除该专业？')) return;
+      try {
+        await fetchWithToken(`/api/majors/${id}`, { method: 'DELETE' });
+        showToast('专业已删除');
+        await loadMajors();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    function renderClassTable() {
+      const key = (document.getElementById('classSearch').value || '').toLowerCase();
+      const grade = document.getElementById('classGradeSelect').value || '';
+      const majorMap = {};
+      (state.majors || []).forEach(m => { majorMap[m.id] = m.majorName; });
+      const userMap = {};
+      (state.users || []).forEach(u => { userMap[u.id] = u.realName || u.username; });
+      let list = state.classes;
+      if (key) list = list.filter(c => (c.clazzName || '').toLowerCase().includes(key) || (c.clazzCode || '').toLowerCase().includes(key));
+      if (grade) list = list.filter(c => (c.grade || '').includes(grade));
+      document.getElementById('classTableBody').innerHTML = list.map(c => `
+      <tr>
+        <td>${c.clazzCode || '-'}</td>
+        <td>${c.clazzName || '-'}</td>
+        <td>${majorMap[c.majorId] || c.majorId || '-'}</td>
+        <td>${c.grade || '-'}</td>
+        <td>${userMap[c.headTeacherId] || c.headTeacherId || '-'}</td>
+        <td>
+          <button class="table-btn" onclick="editClass(${c.id})">编辑</button>
+          <button class="table-btn" onclick="deleteClass(${c.id})">删除</button>
+        </td>
+      </tr>
+    `).join('');
+    }
+
+    function editClass(id) {
+      const c = state.classes.find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('classId').value = c.id;
+      document.getElementById('classCode').value = c.clazzCode || '';
+      document.getElementById('className').value = c.clazzName || '';
+      document.getElementById('classMajor').value = c.majorId ?? '';
+      document.getElementById('classGrade').value = c.grade || '';
+      document.getElementById('classTeacher').value = c.headTeacherId ?? '';
+      document.getElementById('classManager').value = c.managerId ?? '';
+      document.getElementById('classDeptId').value = c.deptId ?? 1;
+    }
+
+    function populateMajorSelect() {
+      const sel = document.getElementById('classMajor');
+      sel.innerHTML = '<option value="">请选择专业</option>';
+      (state.majors || []).forEach(m => {
+        sel.innerHTML += `<option value="${m.id}">${m.majorName}</option>`;
+      });
+    }
+
+    function populateOrgSelects() {
+      const orgs = state.orgs || [];
+      ['majorDeptId', 'classDeptId'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">请选择学院</option>';
+        orgs.forEach(o => {
+          sel.innerHTML += `<option value="${o.id}">${o.name}</option>`;
+        });
+      });
+    }
+
+    function populateUserSelects() {
+      const teachers = (state.users || []).filter(u => u.realName && u.realName.includes('老师'));
+      const allUsers = state.users || [];
+      ['classTeacher', 'classManager'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '<option value="">不指定</option>';
+        allUsers.forEach(u => {
+          sel.innerHTML += `<option value="${u.id}">${u.realName || u.username}</option>`;
+        });
+      });
+    }
+
+    async function saveClass() {
+      const id = document.getElementById('classId').value;
+      const data = {
+        clazzCode: document.getElementById('classCode').value || (id ? (state.classes.find(x => x.id == id)?.clazzCode || '') : 'C' + Date.now()),
+        clazzName: document.getElementById('className').value,
+        majorId: +document.getElementById('classMajor').value,
+        deptId: +document.getElementById('classDeptId').value || 1,
+        grade: document.getElementById('classGrade').value,
+        headTeacherId: +document.getElementById('classTeacher').value || null,
+        managerId: +document.getElementById('classManager').value || null
+      };
+      if (!data.majorId) { showToast('请选择所属专业', true); return; }
+      try {
+        if (id) {
+          await fetchWithToken(`/api/clazzes/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+          showToast('班级修改成功');
+        } else {
+          await fetchWithToken('/api/clazzes', { method: 'POST', body: JSON.stringify(data) });
+          showToast('班级新增成功');
+        }
+        await loadClazzes();
+        resetClassForm();
+      } catch (e) {
+        showToast('操作失败：' + e.message, true);
+      }
+    }
+
+    function resetClassForm() {
+      document.getElementById('classId').value = '';
+      document.getElementById('classCode').value = '';
+      document.getElementById('classForm').reset();
+    }
+
+    async function deleteClass(id) {
+      if (!confirm('确定删除该班级？')) return;
+      try {
+        await fetchWithToken(`/api/clazzes/${id}`, { method: 'DELETE' });
+        showToast('班级已删除');
+        await loadClazzes();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    // 教学任务
+    let taskOptionsLoaded = false;
+
+    async function loadTaskOptions() {
+      if (taskOptionsLoaded) return;
+      try {
+        const [termsRes, clazzesRes, coursesRes, usersRes] = await Promise.all([
+          fetchWithToken('/api/terms'),
+          fetchWithToken('/api/clazzes'),
+          fetchWithToken('/api/teach/courses'),
+          fetchWithToken('/api/users').catch(function() { return null; })
+        ]);
+        if (!termsRes.ok || !clazzesRes.ok || !coursesRes.ok) throw new Error('选项加载失败');
+        const terms = await termsRes.json();
+        const clazzes = await clazzesRes.json();
+        const courses = await coursesRes.json();
+        const termFilter = document.getElementById('taskTermFilter');
+        const termForm = document.getElementById('taskTerm');
+        const classFilter = document.getElementById('taskClassFilter');
+        const classForm = document.getElementById('taskClass');
+        const courseForm = document.getElementById('taskCourse');
+        terms.forEach(t => {
+          termFilter.innerHTML += `<option value="${t.id}">${t.termName}</option>`;
+          termForm.innerHTML += `<option value="${t.id}">${t.termName}</option>`;
+        });
+        clazzes.forEach(c => {
+          classFilter.innerHTML += `<option value="${c.id}">${c.clazzName}</option>`;
+          classForm.innerHTML += `<option value="${c.id}">${c.clazzName}</option>`;
+        });
+        courses.forEach(c => {
+          courseForm.innerHTML += `<option value="${c.id}">${c.cnName}</option>`;
+        });
+
+        if (usersRes && usersRes.ok) {
+          const users = await usersRes.json();
+          const sel = document.getElementById('taskTeachers');
+          sel.innerHTML = '<option value="">请选择教师</option>' +
+            users.map(u => '<option value="' + u.id + '">' + u.realName + '</option>').join('');
+        }
+        taskOptionsLoaded = true;
+      } catch (e) {
+        console.error('加载教学任务选项失败', e);
+      }
+    }
+
+    async function renderTaskTable() {
+      try {
+        const termId = document.getElementById('taskTermFilter').value || '';
+        const clazzId = document.getElementById('taskClassFilter').value || '';
+        const params = new URLSearchParams();
+        if (termId) params.append('termId', termId);
+        if (clazzId) params.append('clazzId', clazzId);
+        const qs = params.toString();
+        const res = await fetchWithToken('/api/teaching-tasks' + (qs ? '?' + qs : ''));
+        if (!res.ok) throw new Error('请求失败 (' + res.status + ')');
+        const list = await res.json();
+        document.getElementById('taskTableBody').innerHTML = list.map(t => `
+        <tr>
+          <td>${t.id}</td>
+          <td>${t.termName || '-'}</td>
+          <td>${t.clazzName || '-'}</td>
+          <td>${t.courseName || '-'}</td>
+          <td>${t.teacherNames || '-'}</td>
+          <td><span class="status-badge status-${t.status === '进行中' ? 'APPROVED' : 'PENDING'}">${t.status || '-'}</span></td>
+          <td>
+            <button class="table-btn" onclick="editTask(${t.id})">编辑</button>
+            <button class="table-btn" onclick="deleteTask(${t.id})">删除</button>
+          </td>
+        </tr>
+      `).join('');
+      } catch (e) {
+        showToast('加载教学任务失败：' + e.message, true);
+      }
+    }
+
+    function addTask() {
+      resetTaskForm();
+    }
+
+    async function editTask(id) {
+      try {
+        const res = await fetchWithToken('/api/teaching-tasks/' + id);
+        if (!res.ok) throw new Error('请求失败 (' + res.status + ')');
+        const t = await res.json();
+        document.getElementById('taskId').value = t.id;
+        document.getElementById('taskTerm').value = t.termId || '';
+        document.getElementById('taskClass').value = t.clazzId || '';
+        document.getElementById('taskCourse').value = t.courseId || '';
+        document.getElementById('taskTeachers').value = (t.teacherIds && t.teacherIds[0]) || '';
+      } catch (e) {
+        showToast('获取教学任务失败：' + e.message, true);
+      }
+    }
+
+    async function saveTask() {
+      const id = document.getElementById('taskId').value;
+      const teacherId = parseInt(document.getElementById('taskTeachers').value) || null;
+      const data = {
+        courseId: parseInt(document.getElementById('taskCourse').value) || null,
+        termId: parseInt(document.getElementById('taskTerm').value) || null,
+        clazzId: parseInt(document.getElementById('taskClass').value) || null,
+        teacherIds: teacherId ? [teacherId] : []
+      };
+      if (!data.termId || !data.clazzId || !data.courseId) {
+        showToast('请填写完整信息（学期、班级、课程）', true);
+        return;
+      }
+      if (data.teacherIds.length === 0) {
+        showToast('请选择授课教师', true);
+        return;
+      }
+      try {
+        if (id) {
+          const res = await fetchWithToken('/api/teaching-tasks/' + id, { method: 'PUT', body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('教学任务修改成功');
+        } else {
+          const res = await fetchWithToken('/api/teaching-tasks', { method: 'POST', body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('教学任务新增成功');
+        }
+        resetTaskForm();
+        await renderTaskTable();
+      } catch (e) {
+        showToast('操作失败：' + e.message, true);
+      }
+    }
+
+    function resetTaskForm() {
+      document.getElementById('taskId').value = '';
+      document.getElementById('taskForm').reset();
+    }
+
+    async function deleteTask(id) {
+      if (!confirm('确定删除该教学任务？')) return;
+      try {
+        const res = await fetchWithToken('/api/teaching-tasks/' + id, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text().catch(() => '删除失败'));
+        showToast('教学任务已删除');
+        await renderTaskTable();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    // 节次时间
+    function openTimeSlotModal(isEdit) {
+      document.getElementById('timeSlotModalTitle').textContent = isEdit ? '编辑节次' : '新增节次';
+      document.getElementById('timeSlotModal').classList.add('active');
+    }
+
+    function closeTimeSlotModal() {
+      document.getElementById('timeSlotModal').classList.remove('active');
+      document.getElementById('timeSlotId').value = '';
+      document.getElementById('timeSlotName').value = '';
+      document.getElementById('timeSlotStart').value = '';
+      document.getElementById('timeSlotEnd').value = '';
+      document.getElementById('timeSlotSort').value = '';
+    }
+
+    async function renderTimeTable() {
+      try {
+        const res = await fetchWithToken('/api/time-slots');
+        if (!res.ok) throw new Error('请求失败');
+        const list = await res.json();
+        document.getElementById('timeTableBody').innerHTML = list.map(t => `
+        <tr>
+          <td>${t.sortOrder || '-'}</td>
+          <td>${t.slotName}</td>
+          <td>${t.startTime}</td>
+          <td>${t.endTime}</td>
+          <td>
+            <button class="table-btn" onclick="editTimeSlot(${t.id})">编辑</button>
+            <button class="table-btn" onclick="deleteTimeSlot(${t.id})">删除</button>
+          </td>
+        </tr>
+      `).join('');
+      } catch (e) {
+        showToast('加载节次失败：' + e.message, true);
+      }
+    }
+
+    function addTimeSlot() {
+      openTimeSlotModal(false);
+    }
+
+    async function editTimeSlot(id) {
+      try {
+        const res = await fetchWithToken('/api/time-slots/' + id);
+        if (!res.ok) throw new Error('请求失败');
+        const t = await res.json();
+        document.getElementById('timeSlotId').value = t.id;
+        document.getElementById('timeSlotName').value = t.slotName || '';
+        document.getElementById('timeSlotStart').value = t.startTime || '';
+        document.getElementById('timeSlotEnd').value = t.endTime || '';
+        document.getElementById('timeSlotSort').value = t.sortOrder || '';
+        openTimeSlotModal(true);
+      } catch (e) {
+        showToast('获取节次失败：' + e.message, true);
+      }
+    }
+
+    async function saveTimeSlot() {
+      const id = document.getElementById('timeSlotId').value;
+      const data = {
+        slotName: document.getElementById('timeSlotName').value.trim(),
+        startTime: document.getElementById('timeSlotStart').value,
+        endTime: document.getElementById('timeSlotEnd').value,
+        sortOrder: parseInt(document.getElementById('timeSlotSort').value) || null
+      };
+      if (!data.slotName || !data.startTime || !data.endTime) {
+        showToast('请填写节次名称、开始时间和结束时间', true);
+        return;
+      }
+      try {
+        if (id) {
+          const res = await fetchWithToken('/api/time-slots/' + id, { method: 'PUT', body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('节次修改成功');
+        } else {
+          const res = await fetchWithToken('/api/time-slots', { method: 'POST', body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('节次新增成功');
+        }
+        closeTimeSlotModal();
+        await renderTimeTable();
+      } catch (e) {
+        showToast('操作失败：' + e.message, true);
+      }
+    }
+
+    async function deleteTimeSlot(id) {
+      if (!confirm('确定删除该节次？')) return;
+      try {
+        const res = await fetchWithToken('/api/time-slots/' + id, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text().catch(() => '删除失败'));
+        showToast('节次已删除');
+        await renderTimeTable();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    async function initTimeSlots() {
+      if (!confirm('将初始化默认节次（1-2节 ~ 9-10节），已有节次不会被覆盖，确定继续？')) return;
+      try {
+        const res = await fetchWithToken('/api/time-slots/init', { method: 'POST' });
+        if (!res.ok) throw new Error(await res.text().catch(() => '初始化失败'));
+        showToast('默认节次初始化成功');
+        await renderTimeTable();
+      } catch (e) {
+        showToast('初始化失败：' + e.message, true);
+      }
+    }
+
+    // 场馆校区楼宇房间
+    function escapeHtml(v) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    var venueBuildingsMap = {};
+
+    function switchVenueTab(tab) {
+      document.querySelectorAll('.venue-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.venue-panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('panel-' + tab).classList.add('active');
+    }
+
+    // ==================== 校区 ====================
+
+    async function renderCampusTable() {
+      try {
+        const res = await fetchWithToken('/api/campuses');
+        if (!res.ok) throw new Error('请求失败');
+        const list = await res.json();
+        document.getElementById('campusTableBody').innerHTML = list.map(c => `
+        <tr>
+          <td>${c.id}</td>
+          <td>${c.name}</td>
+          <td>${c.address || '-'}</td>
+          <td>
+            <button class="venue-btn" onclick="editCampus(${c.id})">编辑</button>
+            <button class="venue-btn" onclick="deleteCampus(${c.id})">删除</button>
+          </td>
+        </tr>
+      `).join('');
+      } catch (e) {
+        showToast('加载校区失败：' + e.message, true);
+      }
+    }
+
+    function addCampus() {
+      var name = prompt('校区名称：');
+      if (!name) return;
+      var address = prompt('详细地址：');
+      if (!address) return;
+      (async function() {
+        try {
+          var res = await fetchWithToken('/api/campuses', { method: 'POST', body: JSON.stringify({ name: name, address: address }) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('校区新增成功');
+          await renderCampusTable();
+        } catch (e) {
+          showToast('新增失败：' + e.message, true);
+        }
+      })();
+    }
+
+    async function editCampus(id) {
+      try {
+        var res = await fetchWithToken('/api/campuses/' + id);
+        if (!res.ok) throw new Error('请求失败');
+        var c = await res.json();
+        var name = prompt('校区名称：', c.name);
+        if (!name) return;
+        var address = prompt('详细地址：', c.address || '');
+        if (!address) return;
+        var r = await fetchWithToken('/api/campuses/' + id, { method: 'PUT', body: JSON.stringify({ name: name, address: address }) });
+        if (!r.ok) throw new Error(await r.text().catch(() => '请求失败'));
+        showToast('校区修改成功');
+        await renderCampusTable();
+      } catch (e) {
+        showToast('编辑失败：' + e.message, true);
+      }
+    }
+
+    async function deleteCampus(id) {
+      if (!confirm('确定删除该校区？')) return;
+      try {
+        var res = await fetchWithToken('/api/campuses/' + id, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text().catch(() => '删除失败'));
+        showToast('校区已删除');
+        await renderCampusTable();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    // ==================== 楼栋 ====================
+
+    async function renderBuildingTable() {
+      try {
+        var res = await fetchWithToken('/api/buildings');
+        if (!res.ok) throw new Error('请求失败');
+        var list = await res.json();
+        venueBuildingsMap = {};
+        list.forEach(function(b) { venueBuildingsMap[b.id] = b.name; });
+        document.getElementById('buildingTableBody').innerHTML = list.map(function(b) {
+          var campusName = b.campus || '-';
+          return '<tr><td>' + b.id + '</td><td>' + escapeHtml(campusName) + '</td><td>' + escapeHtml(b.name) + '</td><td>' +
+            '<button class=\"venue-btn\" onclick=\"editBuilding(' + b.id + ')\">编辑</button>' +
+            '<button class=\"venue-btn\" onclick=\"deleteBuilding(' + b.id + ')\">删除</button></td></tr>';
+        }).join('');
+        // 同步刷新房间表单的楼宇下拉
+        var sel = document.getElementById('roomBuilding');
+        if (sel) {
+          sel.innerHTML = '<option value="">请选择楼宇</option>' +
+            list.map(function(b) { return '<option value=\"' + b.id + '\">' + escapeHtml(b.name) + '</option>'; }).join('');
+        }
+      } catch (e) {
+        showToast('加载楼栋失败：' + e.message, true);
+      }
+    }
+
+    function addBuilding() {
+      var campus = prompt('所属校区：');
+      if (!campus) return;
+      var name = prompt('楼宇名称：');
+      if (!name) return;
+      (async function() {
+        try {
+          var res = await fetchWithToken('/api/buildings', { method: 'POST', body: JSON.stringify({ name: name, campus: campus }) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('楼宇新增成功');
+          await renderBuildingTable();
+        } catch (e) {
+          showToast('新增失败：' + e.message, true);
+        }
+      })();
+    }
+
+    async function editBuilding(id) {
+      try {
+        var res = await fetchWithToken('/api/buildings/' + id);
+        if (!res.ok) throw new Error('请求失败');
+        var b = await res.json();
+        var campus = prompt('所属校区：', b.campus || '');
+        if (!campus) return;
+        var name = prompt('楼宇名称：', b.name);
+        if (!name) return;
+        var r = await fetchWithToken('/api/buildings/' + id, { method: 'PUT', body: JSON.stringify({ name: name, campus: campus }) });
+        if (!r.ok) throw new Error(await r.text().catch(() => '请求失败'));
+        showToast('楼宇修改成功');
+        await renderBuildingTable();
+      } catch (e) {
+        showToast('编辑失败：' + e.message, true);
+      }
+    }
+
+    async function deleteBuilding(id) {
+      if (!confirm('确定删除该楼宇？')) return;
+      try {
+        var res = await fetchWithToken('/api/buildings/' + id, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text().catch(() => '删除失败'));
+        showToast('楼宇已删除');
+        await renderBuildingTable();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    // ==================== 房间 ====================
+
+    async function renderRoomTable() {
+      try {
+        var res = await fetchWithToken('/api/rooms');
+        if (!res.ok) throw new Error('请求失败');
+        var list = await res.json();
+        document.getElementById('roomTableBody').innerHTML = list.map(function(r) {
+          var buildingName = venueBuildingsMap[r.buildingId] || 'ID:' + r.buildingId;
+          return '<tr><td>' + escapeHtml(r.code) + '</td><td>' + escapeHtml(buildingName) + '</td><td>' + (r.floor || '-') + '</td><td>' + (r.seats || '-') + '</td><td>' +
+            '<button class=\"venue-btn\" onclick=\"editRoom(' + r.id + ')\">编辑</button>' +
+            '<button class=\"venue-btn\" onclick=\"deleteRoom(' + r.id + ')\">删除</button></td></tr>';
+        }).join('');
+      } catch (e) {
+        showToast('加载房间失败：' + e.message, true);
+      }
+    }
+
+    function addRoom() {
+      resetRoomForm();
+    }
+
+    async function editRoom(id) {
+      try {
+        var res = await fetchWithToken('/api/rooms/' + id);
+        if (!res.ok) throw new Error('请求失败');
+        var r = await res.json();
+        document.getElementById('roomId').value = r.id;
+        document.getElementById('roomBuilding').value = r.buildingId || '';
+        document.getElementById('roomFloor').value = r.floor || '';
+        document.getElementById('roomCode').value = r.code || '';
+        document.getElementById('roomSeats').value = r.seats || '';
+        document.getElementById('roomArea').value = r.area || '';
+        document.getElementById('roomIntro').value = r.intro || '';
+      } catch (e) {
+        showToast('获取房间失败：' + e.message, true);
+      }
+    }
+
+    async function saveRoom() {
+      var id = document.getElementById('roomId').value;
+      var data = {
+        buildingId: parseInt(document.getElementById('roomBuilding').value) || null,
+        floor: parseInt(document.getElementById('roomFloor').value) || null,
+        code: document.getElementById('roomCode').value.trim(),
+        seats: parseInt(document.getElementById('roomSeats').value) || null,
+        area: document.getElementById('roomArea').value || null,
+        intro: document.getElementById('roomIntro').value.trim() || null
+      };
+      if (!data.buildingId || !data.code) {
+        showToast('请填写所属楼宇和房间号', true);
+        return;
+      }
+      try {
+        if (id) {
+          var res = await fetchWithToken('/api/rooms/' + id, { method: 'PUT', body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('房间修改成功');
+        } else {
+          var res = await fetchWithToken('/api/rooms', { method: 'POST', body: JSON.stringify(data) });
+          if (!res.ok) throw new Error(await res.text().catch(() => '请求失败'));
+          showToast('房间新增成功');
+        }
+        resetRoomForm();
+        await renderRoomTable();
+      } catch (e) {
+        showToast('操作失败：' + e.message, true);
+      }
+    }
+
+    function resetRoomForm() {
+      document.getElementById('roomId').value = '';
+      document.getElementById('roomForm').reset();
+    }
+
+    async function deleteRoom(id) {
+      if (!confirm('确定删除该房间？')) return;
+      try {
+        var res = await fetchWithToken('/api/rooms/' + id, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await res.text().catch(() => '删除失败'));
+        showToast('房间已删除');
+        await renderRoomTable();
+      } catch (e) {
+        showToast('删除失败：' + e.message, true);
+      }
+    }
+
+    // 场馆状态可视化 - 按楼宇+楼层动态显示房间
+    // 生成场馆状态数据
+    function generateVenueData() {
+      const venueData = {};
+      const buildings = window.venueBuildings || [];
+      const rooms = window.venueRooms || [];
+
+      buildings.forEach(building => {
+        venueData[building.name] = {};
+        const buildingRooms = rooms.filter(r => r.buildingId === building.id);
+        buildingRooms.forEach(room => {
+          const floorKey = `${room.floor}层`;
+          if (!venueData[building.name][floorKey]) {
+            venueData[building.name][floorKey] = [];
+          }
+
+          const statuses = ['free', 'occupied', 'reserved', 'maintenance'];
+          const status = statuses[Math.floor(Math.random() * statuses.length)];
+          const intro = room.intro || '';
+
+          const timeSlots = (state.timeSlots || DEFAULT_TIME_SLOTS).map(slot => {
+            const slotStatus = Math.random() > 0.5 ? 'free' : 'occupied';
+            return {
+              time: `${slot.start}-${slot.end}`,
+              status: slotStatus,
+              user: slotStatus === 'occupied' ? ['实验课', '教师使用', '开放预约', '实训课', '会议使用'][Math.floor(Math.random() * 5)] : ''
+            };
+          });
+
+          venueData[building.name][floorKey].push({
+            id: room.id,
+            code: room.code,
+            type: intro.includes('实验室') ? 'lab' : intro.includes('会议室') ? 'meeting' : 'classroom',
+            status: status,
+            capacity: room.seats || 0,
+            currentUser: status === 'occupied' ? ['计算机科学与技术', '物理实验课', '教师会议', '学术会议', '工程力学'][Math.floor(Math.random() * 5)] : '',
+            equipment: intro.includes('计算机') ? '计算机' : intro.includes('嵌入式') ? '嵌入式设备' : '多媒体',
+            description: intro,
+            timeSlots: timeSlots
+          });
+        });
+      });
+
+      return venueData;
+    }
+
+    // 获取状态文本
+    function getStatusText(status) {
+      const statusMap = {
+        'free': '空闲',
+        'occupied': '占用',
+        'reserved': '预约',
+        'maintenance': '维修'
+      };
+      return statusMap[status] || status;
+    }
+
+    // 获取类型文本
+    function getTypeText(type) {
+      const typeMap = {
+        'lab': '实验室',
+        'classroom': '教室',
+        'meeting': '会议室'
+      };
+      return typeMap[type] || type;
+    }
+
+    // 场馆状态可视化
+    function refreshVenueStatus() {
+      const building = document.getElementById('viewBuildingSelect').value;
+      const floor = document.getElementById('viewFloorSelect').value;
+      const statusFilter = document.getElementById('viewStatusSelect').value;
+      const typeFilter = document.getElementById('viewTypeSelect').value;
+      const container = document.getElementById('buildingContainer');
+
+      if (!container) return;
+
+      // 清空容器
+      container.innerHTML = '';
+
+      // 生成场馆数据
+      const venueData = generateVenueData();
+
+      // 获取当前楼宇和楼层的房间数据
+      const buildingData = venueData[building];
+      if (!buildingData) return;
+
+      // 动态生成楼层
+      Object.keys(buildingData).forEach(floorKey => {
+        // 如果选择了特定楼层，则只显示该楼层
+        if (floor !== '全部楼层' && floorKey !== floor) return;
+
+        const floorRooms = buildingData[floorKey];
+
+        // 应用筛选
+        let filteredRooms = floorRooms;
+        if (statusFilter !== 'all') {
+          filteredRooms = filteredRooms.filter(room => room.status === statusFilter);
+        }
+        if (typeFilter !== 'all') {
+          filteredRooms = filteredRooms.filter(room => room.type === typeFilter);
+        }
+
+        // 创建楼层部分
+        const floorSection = document.createElement('div');
+        floorSection.className = 'floor-section';
+
+        // 楼层标题
+        const floorHeader = document.createElement('div');
+        floorHeader.className = 'floor-header';
+        floorHeader.innerHTML = `
+        <span>${floorKey}</span>
+        <span>共 ${filteredRooms.length} 个房间</span>
+      `;
+        floorSection.appendChild(floorHeader);
+
+        // 房间容器
+        const roomsContainer = document.createElement('div');
+        roomsContainer.className = 'rooms-container';
+
+        // 生成房间卡片
+        filteredRooms.forEach(room => {
+          const roomCard = document.createElement('div');
+          roomCard.className = `room-card room-${room.status}`;
+
+          // 根据容量智能调整卡片大小（人数越多区块越大）
+          // 容量范围：20-70人，尺寸范围：120-220px
+          const minCapacity = 20;
+          const maxCapacity = 70;
+          const minSize = 120;
+          const maxSize = 220;
+
+          // 计算尺寸比例
+          const capacityRatio = (room.capacity - minCapacity) / (maxCapacity - minCapacity);
+          const size = minSize + (maxSize - minSize) * Math.max(0, Math.min(1, capacityRatio));
+
+          // 同时调整宽度和高度，保持正方形或接近正方形的比例
+          roomCard.style.width = `${size}px`;
+          roomCard.style.height = `${size}px`;
+
+          // 根据容量调整字体大小
+          const fontSize = Math.max(12, Math.min(16, 12 + room.capacity * 0.05));
+          roomCard.style.fontSize = `${fontSize}px`;
+
+          // 房间信息
+          roomCard.innerHTML = `
+          <div class="room-number" style="font-size: ${fontSize + 2}px; font-weight: bold;">${room.code}</div>
+          <div class="room-status">${getStatusText(room.status)}</div>
+          <div class="room-capacity" style="font-size: ${fontSize}px;">容量: ${room.capacity}人</div>
+          <div class="room-type">类型: ${getTypeText(room.type)}</div>
+          <div class="time-slots-container">
+            ${room.timeSlots.slice(0, 2).map(slot => `
+              <div class="time-slot slot-${slot.status}">
+                <span>${slot.time}</span>
+                <span style="margin-left: auto;">${slot.user || getStatusText(slot.status)}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+          // 点击查看详情
+          roomCard.addEventListener('click', () => showRoomDetail(room));
+          roomsContainer.appendChild(roomCard);
+        });
+
+        floorSection.appendChild(roomsContainer);
+        container.appendChild(floorSection);
+      });
+    }
+
+    // 显示房间详情
+    function showRoomDetail(room) {
+      const modal = document.getElementById('roomDetailModal');
+      const title = document.getElementById('roomDetailTitle');
+      const content = document.getElementById('roomDetailContent');
+
+      if (!modal || !title || !content) return;
+
+      title.textContent = `${room.code} 房间详情`;
+
+      content.innerHTML = `
+      <div class="room-detail-info">
+        <div class="room-detail-row">
+          <div class="room-detail-label">房间编号:</div>
+          <div class="room-detail-value">${room.code}</div>
+        </div>
+        <div class="room-detail-row">
+          <div class="room-detail-label">房间类型:</div>
+          <div class="room-detail-value">${getTypeText(room.type)}</div>
+        </div>
+        <div class="room-detail-row">
+          <div class="room-detail-label">当前状态:</div>
+          <div class="room-detail-value">${getStatusText(room.status)}</div>
+        </div>
+        <div class="room-detail-row">
+          <div class="room-detail-label">容纳人数:</div>
+          <div class="room-detail-value">${room.capacity} 人</div>
+        </div>
+        <div class="room-detail-row">
+          <div class="room-detail-label">当前使用:</div>
+          <div class="room-detail-value">${room.currentUser || '无'}</div>
+        </div>
+        <div class="room-detail-row">
+          <div class="room-detail-label">设备类型:</div>
+          <div class="room-detail-value">${room.equipment}</div>
+        </div>
+        <div class="room-detail-row">
+          <div class="room-detail-label">房间描述:</div>
+          <div class="room-detail-value">${room.description}</div>
+        </div>
+      </div>
+      
+      <div class="time-slot-info">
+        <h4>当日使用时段</h4>
+        ${room.timeSlots.map(slot => `
+          <div class="time-slot slot-${slot.status}">
+            <span>${slot.time}</span>
+            <span style="margin-left: auto;">${slot.user || getStatusText(slot.status)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+      modal.classList.add('active');
+    }
+
+    // 关闭房间详情弹窗
+    function closeRoomDetailModal() {
+      const modal = document.getElementById('roomDetailModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    }
+
+    // 从 API 加载场馆数据
+    async function initVenueData() {
+      try {
+        const [bRes, rRes] = await Promise.all([
+          fetchWithToken('/api/buildings'),
+          fetchWithToken('/api/rooms')
+        ]);
+        window.venueBuildings = await bRes.json();
+        window.venueRooms = await rRes.json();
+      } catch (e) {
+        console.error('加载场馆数据失败', e);
+        window.venueBuildings = [];
+        window.venueRooms = [];
+      }
+      initVenueStatus();
+    }
+
+    // 初始化场馆状态
+    function initVenueStatus() {
+      const buildingSelect = document.getElementById('viewBuildingSelect');
+      if (buildingSelect) {
+        buildingSelect.innerHTML = (window.venueBuildings || []).map(b =>
+          `<option value="${b.name}">${b.name}</option>`
+        ).join('');
+      }
+      updateFloorSelect();
+      refreshVenueStatus();
+      setInterval(refreshVenueStatus, 30000);
+    }
+
+    // 更新楼层选择
+    function updateFloorSelect() {
+      const building = document.getElementById('viewBuildingSelect').value;
+      const floorSelect = document.getElementById('viewFloorSelect');
+      if (!floorSelect) return;
+
+      const b = (window.venueBuildings || []).find(x => x.name === building);
+      const buildingRooms = (window.venueRooms || []).filter(r => b ? r.buildingId === b.id : false);
+      const floors = [...new Set(buildingRooms.map(r => r.floor))].sort((a, b) => a - b);
+
+      const options = [`<option value="全部楼层">全部楼层</option>`];
+      floors.forEach(f => options.push(`<option value="${f}层">${f}层</option>`));
+      floorSelect.innerHTML = options.join('');
+    }
+
+    // 绑定楼宇选择变化事件
+    document.addEventListener('DOMContentLoaded', function () {
+      const buildingSelect = document.getElementById('viewBuildingSelect');
+      if (buildingSelect) {
+        buildingSelect.addEventListener('change', function () {
+          updateFloorSelect();
+          refreshVenueStatus();
+        });
+      }
+
+      // 初始化年度校历
+      generateYearCalendar();
+    });
+
+    // 替换你原来的 saveHomeCourse 函数
+    function showAddCoursePanel() {
+      document.getElementById('addCoursePanel').style.display = 'block';
+    }
+
+    function saveHomeCourse() {
+      const name = document.getElementById('homeCourseName').value;
+      const credit = document.getElementById('homeCourseCredit').value;
+      if (!name || !credit) {
+        showToast('请填写完整', true);
+        return;
+      }
+
+      // 生成新课程数据（自动补全课程管理需要的字段）
+      const newId = state.teachCourses.length
+        ? Math.max(...state.teachCourses.map(x => x.id)) + 1
+        : 1;
+
+      const newCourse = {
+        id: newId,
+        code: `CO${newId.toString().padStart(3, '0')}`,
+        cnName: name,
+        enName: name, // 英文名称默认用中文
+        type: '必修',
+        credit: +credit,
+        totalHour: 64,
+        teachHour: 32,
+        practiceHour: 16,
+        labHour: 16,
+        netHour: 0,
+        term: '2025-2026学年第一学期'
+      };
+
+      // 存入课程数据
+      state.teachCourses.push(newCourse);
+
+      // 课程总数 +1
+      const countEl = document.getElementById('courseTotalCount');
+      countEl.innerText = parseInt(countEl.innerText) + 1;
+
+      showToast(`课程【${name}】保存成功，已同步到课程管理`);
+      document.getElementById('addCoursePanel').style.display = 'none';
+    }
+
+    // 加载年度校历
+    function loadYearCalendar() {
+      const yearSelect = document.getElementById('yearSelect');
+      const monthSelect = document.getElementById('monthSelect');
+      if (!yearSelect) return;
+
+      const year = parseInt(yearSelect.value);
+      const month = monthSelect ? parseInt(monthSelect.value) : 0;
+
+      // 重新生成指定年份的校历
+      generateYearCalendar(year, month);
+    }
+
+    // 生成年度校历
+    function generateYearCalendar(year, month = 0) {
+      if (!year) year = new Date().getFullYear();
+
+      const calendarContainer = document.getElementById('calendarContainer');
+      if (!calendarContainer) return;
+
+      const date = new Date(year, month, 1);
+      const yearStr = date.getFullYear();
+      const monthStr = date.getMonth() + 1;
+
+      // 更新标题
+      let title = calendarContainer.querySelector('.calendar-title');
+      if (!title) {
+        title = document.createElement('h3');
+        title.className = 'calendar-title';
+        title.style.marginBottom = '16px';
+        calendarContainer.insertBefore(title, calendarContainer.firstChild);
+      }
+      title.textContent = `${yearStr}年${monthStr}月`;
+
+      // 获取当月的第一天和最后一天
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDay = firstDay.getDay(); // 0 = Sunday
+      const totalDays = lastDay.getDate();
+
+      // 获取学期信息
+      const currentTerm = (state.teachTerms || []).find(t => {
+        const startDate = new Date(t.startDate);
+        const endDate = new Date(t.endDate);
+        return firstDay >= startDate && firstDay <= endDate;
+      });
+
+      // 生成日历网格
+      const calendarGrid = calendarContainer.querySelector('.calendar-grid');
+      if (!calendarGrid) return;
+
+      // 保留表头
+      const headers = Array.from(calendarGrid.querySelectorAll('.calendar-header'));
+      calendarGrid.innerHTML = '';
+      headers.forEach(header => calendarGrid.appendChild(header));
+
+      // 添加空白单元格
+      for (let i = 0; i < startDay; i++) {
+        const blankCell = document.createElement('div');
+        blankCell.className = 'calendar-day other-month';
+        calendarGrid.appendChild(blankCell);
+      }
+
+      // 添加日期单元格
+      const today = new Date();
+      for (let day = 1; day <= totalDays; day++) {
+        const currentDate = new Date(year, month, day);
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+
+        // 检查是否是今天
+        if (currentDate.toDateString() === today.toDateString()) {
+          dayCell.classList.add('today');
+        }
+
+        // 检查是否是周末
+        const dayOfWeek = currentDate.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          dayCell.classList.add('weekend');
+        }
+
+        // 检查是否是节假日
+        if (currentTerm && currentTerm.holidays) {
+          const holidays = currentTerm.holidays.split(',');
+          if (holidays.includes(currentDate.toISOString().split('T')[0])) {
+            dayCell.classList.add('holiday');
+          }
+        }
+
+        // 检查是否是实验室开放日
+        if (currentTerm && currentTerm.labOpenDays) {
+          const labOpenDays = currentTerm.labOpenDays.split(',');
+          if (labOpenDays.includes(currentDate.toISOString().split('T')[0])) {
+            dayCell.classList.add('lab-open');
+          }
+        }
+
+        // 添加日期内容
+        let content = `<div class="day-number">${day}</div>`;
+        content += `<div class="day-week">${['日', '一', '二', '三', '四', '五', '六'][dayOfWeek]}</div>`;
+
+        // 添加特殊标记
+        if (dayCell.classList.contains('holiday')) {
+          content += `<div class="day-holiday">节假日</div>`;
+        }
+        if (dayCell.classList.contains('lab-open')) {
+          content += `<div class="day-lab">开放日</div>`;
+        }
+
+        dayCell.innerHTML = content;
+
+        // 添加点击事件
+        dayCell.addEventListener('click', () => showDateDetails(currentDate, currentTerm));
+
+        calendarGrid.appendChild(dayCell);
+      }
+    }
+
+    // 显示日期详情
+    function showDateDetails(date, term) {
+      const dateDetails = document.getElementById('dateDetails');
+      if (!dateDetails) return;
+
+      const dateStr = date.toISOString().split('T')[0];
+      const dayOfWeek = date.getDay();
+      const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+      let details = `<h4 style="margin-bottom: 12px;">${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（星期${weekDays[dayOfWeek]}）</h4>`;
+
+      if (term) {
+        // 计算是第几周
+        const startDate = new Date(term.startDate);
+        const diffTime = date - startDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const weekNumber = Math.floor(diffDays / 7) + 1;
+
+        details += `<p><strong>教学周：</strong>第${weekNumber}周</p>`;
+
+        // 检查特殊日期
+        if (term.holidays && term.holidays.split(',').includes(dateStr)) {
+          details += `<p style="color: #dc2626;"><strong>特殊标记：</strong>节假日</p>`;
+        }
+        if (term.labOpenDays && term.labOpenDays.split(',').includes(dateStr)) {
+          details += `<p style="color: #f59e0b;"><strong>特殊标记：</strong>实验室开放日</p>`;
+        }
+
+        // 检查教学节点
+        if (term.courseSelectStart === dateStr) {
+          details += `<p style="color: #2563eb;"><strong>教学节点：</strong>选课开始</p>`;
+        }
+        if (term.courseAdjustStart === dateStr) {
+          details += `<p style="color: #2563eb;"><strong>教学节点：</strong>退补选开始</p>`;
+        }
+        if (term.midtermStart === dateStr) {
+          details += `<p style="color: #2563eb;"><strong>教学节点：</strong>期中考试开始</p>`;
+        }
+        if (term.finalStart === dateStr) {
+          details += `<p style="color: #2563eb;"><strong>教学节点：</strong>期末考试开始</p>`;
+        }
+      } else {
+        details += `<p style="color: var(--muted);">该日期不在当前学期内</p>`;
+      }
+
+      dateDetails.innerHTML = details;
+    }
+
+    // 页面切换
+    function switchPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      document.getElementById(`nav-${page}`).classList.add('active');
+
+      // 处理 iframe 页面加载（延迟加载，只加载一次）
+      if (page === 'exp-task') {
+        const iframe = document.getElementById('iframe-exp-task');
+        if (!iframe.src) iframe.src = 'exp-task.html';
+      } else if (page === 'exp-item') {
+        const iframe = document.getElementById('iframe-exp-item');
+        if (!iframe.src) iframe.src = 'exp-item.html';
+      } else if (page === 'exp-open') {
+        const iframe = document.getElementById('iframe-exp-open');
+        if (!iframe.src) iframe.src = 'exp-open.html';
+      } else if (page === 'training-plan') {
+        const iframe = document.getElementById('iframe-training-plan');
+        if (!iframe.src) iframe.src = 'training-plan.html';
+      } else if (page === 'exp-quality') {
+        const iframe = document.getElementById('iframe-exp-quality');
+        if (!iframe.src) iframe.src = 'exp-quality.html';
+      } else if (page === 'schedule-application') {
+        const iframe = document.getElementById('iframe-schedule-application');
+        if (!iframe.src) iframe.src = 'schedule-application.html';
+      } else if (page === 'schedule-reservation') {
+        const iframe = document.getElementById('iframe-schedule-reservation');
+        if (!iframe.src) iframe.src = 'schedule-reservation.html';
+      } else if (page === 'schedule-records') {
+        const iframe = document.getElementById('iframe-schedule-records');
+        if (!iframe.src) iframe.src = 'schedule-records.html';
+      } else if (page === 'schedule-logs') {
+        const iframe = document.getElementById('iframe-schedule-logs');
+        if (!iframe.src) iframe.src = 'schedule-logs.html';
+      } else if (page === 'equipment-manage') {
+        const iframe = document.getElementById('iframe-equipment-manage');
+        if (!iframe.src) iframe.src = 'equipment-manage.html';
+      }
+
+      // 进入页面自动渲染对应表格
+      if (page === 'teach-course') { loadCourseTerms(); loadTeachCourses(); }
+      if (page === 'teach-calendar') { /* loadTerms handled by init at bottom */ }
+      if (page === 'teach-major') { loadMajors(); loadClazzes(); loadAndRenderUsers(); populateOrgSelects(); }
+      if (page === 'teach-task') { loadTaskOptions(); renderTaskTable(); }
+      if (page === 'teach-time') renderTimeTable();
+      if (page === 'venue-manage') { renderCampusTable(); renderBuildingTable(); renderRoomTable(); }
+    }
+
+    // 初始化
+    window.onload = function () {
+      // 默认激活系统首页
+      switchPage('teach-dashboard');
+      
+      renderStats();
+      renderOrgTree();
+      fillOrgSelects();
+      fillRoleParentSelect();
+      renderUserRoleSelector();
+      renderPermissionMatrix();
+      loadAndRenderUsers();
+      renderRoleTable();
+      renderPermissionTable();
+      loadAllDictionaries().then(() => {
+        renderDictSelectOptions('courseTypeSelect', 'course_type', [{ value: 'all', text: '全部修读性质' }]);
+        renderDictSelectOptions('courseType', 'course_type');
+        renderDictSelectOptions('viewTypeSelect', 'room_type', [{ value: 'all', text: '全部类型' }]);
+      });
+      initVenueData();
+      loadCourseTerms();
+
+      // 绑定左侧菜单点击
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.onclick = () => {
+          const page = item.dataset.page;
+          if (page) switchPage(page);
+        };
+      });
+
+      // 退出登录（统一清除所有 localStorage，防止旧数据干扰）
+      document.getElementById('logoutBtn').onclick = () => {
+        if (confirm('确定退出登录？')) {
+          localStorage.clear();
+          window.location.href = '/login.html';
+        }
+      };
+
+      // Token 校验：无 token 直接踢回登录页
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // 兜底：有 token 但 loginUser 为空，默认给"学生"权限
+      if (!loginUser || !loginUser.roleName) {
+        loginUser = {
+          username: 'guest',
+          realName: '访客',
+          roleName: '学生',
+          role: '学生',
+          roles: ['学生'],
+          roleCode: 'STUDENT'
+        };
+      }
+
+      // 角色权限菜单控制（基于角色码）
+      const roleCode = loginUser.roleCode || 'STUDENT';
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        const page = item.dataset.page;
+        let hasPermission = false;
+
+        if (roleCode === 'LAB_ADMIN') {
+          hasPermission = true;
+        }
+        else if (roleCode === 'EQUIPMENT_ADMIN') {
+          const allow = [
+            'dashboard',          // 总览看板
+            'equipment-manage'    // 设备管理
+          ];
+          hasPermission = allow.includes(page);
+        }
+        else if (roleCode === 'TEACHER') {
+          const allow = [
+            'dashboard',          // 总览看板
+            'booking',            // 预约管理
+            'repair',             // 报修管理
+            'teach-dashboard',    // 教学首页
+            'teach-course',       // 教学课程
+            'teach-calendar',     // 教学校历
+            'teach-major',        // 教学专业
+            'teach-task',         // 教学任务
+            'exp-task',           // 实验教学任务管理
+            'exp-item',           // 实验项目库管理
+            'exp-open',           // 实验项目开出管理
+            'exp-quality',        // 实验教学质量登记
+            'training-plan',      // 实训计划管理
+            'venue-status',       // 场馆状态可视化
+            'timetable-matrix',   // 全校课表检索
+            'schedule-records',   // 排课记录管理
+            'statistics-reports',   // 排课数据统计
+            'statistics-dashboard',  // 排课数据大屏
+            'equipment-manage'    // 设备管理
+          ];
+          hasPermission = allow.includes(page);
+        }
+        else {
+          const allow = [
+            'dashboard',          // 总览看板
+            'booking',            // 预约管理
+            'repair',             // 报修管理
+            'teach-dashboard',    // 教学首页
+            'venue-status',       // 场馆状态可视化
+            'timetable-matrix',   // 全校课表检索
+            'equipment-manage'    // 设备管理
+          ];
+          hasPermission = allow.includes(page);
+        }
+
+        // 最终控制显示/隐藏
+        if (hasPermission) {
+          item.style.display = '';
+          item.classList.add('enabled');
+          item.classList.remove('disabled');
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      // 默认显示首页
+      switchPage('permissions');
+
+      // 渲染用户信息（登录状态已100%校验，直接赋值）
+      const displayName = loginUser.realName || loginUser.username;
+      const displayRole = loginUser.roleName || '普通用户';
+
+      document.getElementById('userName').textContent = displayName;
+      document.getElementById('userRole').textContent = displayRole;
+      document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+
+      // 从API加载角色和组织数据
+      fetchRoles();
+      fetchOrgs();
+
+      // ====================== 校历管理 =======================
+      let terms = [];
+      let currentTerm = null;
+      let currentCalendar = [];
+
+      window.loadTerms = async function () {
+        try {
+          const res = await fetchWithToken('/api/terms');
+          terms = await res.json();
+          populateTermSelect();
+          if (terms.length > 0) await selectTerm(terms[0].id);
+        } catch (e) {
+          console.error('加载学期列表失败', e);
+        }
+      }
+
+      function populateTermSelect() {
+        const select = document.getElementById('termSelect');
+        if (!select) return;
+        select.innerHTML = '';
+        terms.forEach(term => {
+          const option = document.createElement('option');
+          option.value = term.id;
+          option.textContent = term.termName;
+          select.appendChild(option);
+        });
+      }
+
+      async function selectTerm(termId) {
+        try {
+          const res = await fetchWithToken(`/api/terms/${termId}`);
+          currentTerm = await res.json();
+        } catch (e) {
+          currentTerm = terms.find(t => t.id === termId);
+        }
+        if (!currentTerm) return;
+        const el = id => document.getElementById(id);
+        const termNameInput = el('termName');
+        const startDateInput = el('startDate');
+        const endDateInput = el('endDate');
+        const totalWeeksInput = el('totalWeeks');
+        if (termNameInput) termNameInput.value = currentTerm.termName || '';
+        if (startDateInput) startDateInput.value = currentTerm.startDate || '';
+        if (endDateInput) endDateInput.value = currentTerm.endDate || '';
+        if (totalWeeksInput) totalWeeksInput.value = currentTerm.totalWeeks || '';
+        await loadCalendar(termId);
+      }
+
+      async function loadCalendar(termId) {
+        try {
+          const res = await fetchWithToken(`/api/terms/${termId}/calendar`);
+          currentCalendar = await res.json();
+        } catch (e) {
+          currentCalendar = [];
+        }
+        loadYearCalendar();
+      }
+
+      // 加载年度日历
+      window.loadYearCalendar = function () {
+        const yearSelect = document.getElementById('yearSelect');
+        const monthSelect = document.getElementById('monthSelect');
+        const container = document.getElementById('calendarContainer');
+
+        if (!yearSelect || !monthSelect || !container) return;
+
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+        let calendarHTML = '<div class="calendar-grid">';
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        days.forEach(day => {
+          calendarHTML += `<div class="calendar-header">${day}</div>`;
+        });
+
+        for (let i = 0; i < 42; i++) {
+          const currentDate = new Date(startDate);
+          currentDate.setDate(startDate.getDate() + i);
+
+          const dateString = currentDate.toISOString().split('T')[0];
+          const isCurrentMonth = currentDate.getMonth() === month;
+          const isToday = dateString === new Date().toISOString().split('T')[0];
+
+          // 检查是否是节假日或实验室开放日
+          const calendarDay = currentCalendar.find(day => day.date === dateString);
+          const isHoliday = calendarDay && calendarDay.isHoliday;
+          const isLabOpen = calendarDay && calendarDay.isLabOpen;
+          const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+          const examStartWeek = (currentTerm ? currentTerm.totalWeeks : 20) - 1;
+          const isExamWeek = calendarDay && calendarDay.week >= examStartWeek;
+
+          let dayClass = 'calendar-day';
+          if (!isCurrentMonth) dayClass += ' other-month';
+          if (isToday) dayClass += ' today';
+          if (isHoliday) dayClass += ' holiday';
+          if (isLabOpen) dayClass += ' lab-open';
+          if (isWeekend) dayClass += ' weekend';
+          if (isExamWeek) dayClass += ' exam-week';
+
+          calendarHTML += `<div class="${dayClass}" data-date="${dateString}" onclick="showDateDetails('${dateString}')">`;
+          calendarHTML += `<div class="day-number">${currentDate.getDate()}</div>`;
+          if (calendarDay) {
+            calendarHTML += `<div class="day-week">第${calendarDay.week}周</div>`;
+            if (calendarDay.holidayName) {
+              calendarHTML += `<div class="day-holiday">${calendarDay.holidayName}</div>`;
+            }
+            if (calendarDay.isExamWeek) {
+              calendarHTML += `<div class="day-exam">考试周</div>`;
+            }
+            if (calendarDay.isLabOpen) {
+              calendarHTML += `<div class="day-lab">实验室开放</div>`;
+            }
+            if (calendarDay.schedule) {
+              calendarHTML += `<div class="day-event">${calendarDay.schedule}</div>`;
+            }
+          }
+          calendarHTML += '</div>';
+        }
+
+        calendarHTML += '</div>';
+        container.innerHTML = calendarHTML;
+      }
+
+      // 显示日期详情（全局可调用）
+      window.showDateDetails = function (dateString) {
+        const detailsContainer = document.getElementById('dateDetails');
+        if (!detailsContainer) return;
+
+        const calendarDay = currentCalendar.find(day => day.date === dateString);
+
+        if (calendarDay) {
+          const date = new Date(dateString);
+          const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+          const weekday = weekdays[date.getDay()];
+
+          let status = '上课日';
+          if (calendarDay.isHoliday) status = '节假日';
+          if (date.getDay() === 0 || date.getDay() === 6) status = '周末';
+          const examStartWeek = (currentTerm ? currentTerm.totalWeeks : 20) - 1;
+          if (calendarDay.week >= examStartWeek) status = '考试周';
+
+          detailsContainer.innerHTML = `
+      <h4>${dateString} ${weekday}</h4>
+      <p><strong>教学周：</strong>第${calendarDay.week}周</p>
+      <p><strong>状态：</strong>${status}</p>
+      <p><strong>学期：</strong>${currentTerm.termName}</p>
+      ${calendarDay.isHoliday ? `<p><strong>节假日：</strong>${calendarDay.holidayName}</p>` : ''}
+      ${calendarDay.isLabOpen ? `<p><strong>实验室：</strong>开放</p>` : ''}
+      ${calendarDay.week >= examStartWeek ? `<p><strong>考试周：</strong>是</p>` : ''}
+      ${calendarDay.schedule ? `<p><strong>当日安排：</strong>${calendarDay.schedule}</p>` : ''}
+    `;
+        } else {
+          detailsContainer.innerHTML = `
+      <h4>${dateString}</h4>
+      <p style="color: var(--muted);">该日期不在当前学期范围内</p>
+    `;
+        }
+      }
+
+      // 显示编辑学期弹窗
+      window.showEditTermModal = function () {
+        const modal = document.getElementById('termModal');
+        const title = document.getElementById('termModalTitle');
+
+        if (!modal || !title) return;
+
+        if (currentTerm) {
+          title.textContent = '编辑学期';
+          const termIdInput = document.getElementById('termId');
+          const termNameInput = document.getElementById('modalTermName');
+          const startDateInput = document.getElementById('modalStartDate');
+          const endDateInput = document.getElementById('modalEndDate');
+          const holidaysInput = document.getElementById('modalHolidays');
+          const labOpenDaysInput = document.getElementById('modalLabOpenDays');
+
+          // 教学节点
+          const courseSelectStartInput = document.getElementById('modalCourseSelectStart');
+          const courseAdjustStartInput = document.getElementById('modalCourseAdjustStart');
+          const midtermStartInput = document.getElementById('modalMidtermStart');
+          const finalStartInput = document.getElementById('modalFinalStart');
+          const makeupStartInput = document.getElementById('modalMakeupStart');
+          const thesisDeadlineInput = document.getElementById('modalThesisDeadline');
+
+          // 重要节点
+          const militaryStartInput = document.getElementById('modalMilitaryStart');
+          const sportsDayInput = document.getElementById('modalSportsDay');
+          const anniversaryInput = document.getElementById('modalAnniversary');
+          const graduationStartInput = document.getElementById('modalGraduationStart');
+          const enrollmentStartInput = document.getElementById('modalEnrollmentStart');
+
+          // 管理与服务信息
+          const staffTrainingStartInput = document.getElementById('modalStaffTrainingStart');
+          const physicalStartInput = document.getElementById('modalPhysicalStart');
+          const safetyEducationInput = document.getElementById('modalSafetyEducation');
+
+          // 校园活动
+          const jobFairInput = document.getElementById('modalJobFair');
+          const campusOpenDayInput = document.getElementById('modalCampusOpenDay');
+
+          if (termIdInput) termIdInput.value = currentTerm.id;
+          if (termNameInput) termNameInput.value = currentTerm.termName;
+          if (startDateInput) startDateInput.value = currentTerm.startDate;
+          if (endDateInput) endDateInput.value = currentTerm.endDate;
+          if (holidaysInput) holidaysInput.value = currentTerm.holidayDates ? currentTerm.holidayDates.join(',') : '';
+          if (labOpenDaysInput) labOpenDaysInput.value = currentTerm.labOpenDays ? currentTerm.labOpenDays.join(',') : '';
+
+          // 教学节点
+          if (courseSelectStartInput) courseSelectStartInput.value = currentTerm.courseSelectStart || '';
+          if (courseAdjustStartInput) courseAdjustStartInput.value = currentTerm.courseAdjustStart || '';
+          if (midtermStartInput) midtermStartInput.value = currentTerm.midtermStart || '';
+          if (finalStartInput) finalStartInput.value = currentTerm.finalStart || '';
+          if (makeupStartInput) makeupStartInput.value = currentTerm.makeupStart || '';
+          if (thesisDeadlineInput) thesisDeadlineInput.value = currentTerm.thesisDeadline || '';
+
+          // 重要节点
+          if (militaryStartInput) militaryStartInput.value = currentTerm.militaryStart || '';
+          if (sportsDayInput) sportsDayInput.value = currentTerm.sportsDay || '';
+          if (anniversaryInput) anniversaryInput.value = currentTerm.anniversary || '';
+          if (graduationStartInput) graduationStartInput.value = currentTerm.graduationStart || '';
+          if (enrollmentStartInput) enrollmentStartInput.value = currentTerm.enrollmentStart || '';
+
+          // 管理与服务信息
+          if (staffTrainingStartInput) staffTrainingStartInput.value = currentTerm.staffTrainingStart || '';
+          if (physicalStartInput) physicalStartInput.value = currentTerm.physicalStart || '';
+          if (safetyEducationInput) safetyEducationInput.value = currentTerm.safetyEducation || '';
+
+          // 校园活动
+          if (jobFairInput) jobFairInput.value = currentTerm.jobFair || '';
+          if (campusOpenDayInput) campusOpenDayInput.value = currentTerm.campusOpenDay || '';
+        } else {
+          title.textContent = '新增学期';
+          const termIdInput = document.getElementById('termId');
+          const termNameInput = document.getElementById('modalTermName');
+          const startDateInput = document.getElementById('modalStartDate');
+          const endDateInput = document.getElementById('modalEndDate');
+          const holidaysInput = document.getElementById('modalHolidays');
+          const labOpenDaysInput = document.getElementById('modalLabOpenDays');
+
+          // 教学节点
+          const courseSelectStartInput = document.getElementById('modalCourseSelectStart');
+          const courseAdjustStartInput = document.getElementById('modalCourseAdjustStart');
+          const midtermStartInput = document.getElementById('modalMidtermStart');
+          const finalStartInput = document.getElementById('modalFinalStart');
+          const makeupStartInput = document.getElementById('modalMakeupStart');
+          const thesisDeadlineInput = document.getElementById('modalThesisDeadline');
+
+          // 重要节点
+          const militaryStartInput = document.getElementById('modalMilitaryStart');
+          const sportsDayInput = document.getElementById('modalSportsDay');
+          const anniversaryInput = document.getElementById('modalAnniversary');
+          const graduationStartInput = document.getElementById('modalGraduationStart');
+          const enrollmentStartInput = document.getElementById('modalEnrollmentStart');
+
+          // 管理与服务信息
+          const staffTrainingStartInput = document.getElementById('modalStaffTrainingStart');
+          const physicalStartInput = document.getElementById('modalPhysicalStart');
+          const safetyEducationInput = document.getElementById('modalSafetyEducation');
+
+          // 校园活动
+          const jobFairInput = document.getElementById('modalJobFair');
+          const campusOpenDayInput = document.getElementById('modalCampusOpenDay');
+
+          if (termIdInput) termIdInput.value = '';
+          if (termNameInput) termNameInput.value = '';
+          if (startDateInput) startDateInput.value = '';
+          if (endDateInput) endDateInput.value = '';
+          if (holidaysInput) holidaysInput.value = '';
+          if (labOpenDaysInput) labOpenDaysInput.value = '';
+
+          // 教学节点
+          if (courseSelectStartInput) courseSelectStartInput.value = '';
+          if (courseAdjustStartInput) courseAdjustStartInput.value = '';
+          if (midtermStartInput) midtermStartInput.value = '';
+          if (finalStartInput) finalStartInput.value = '';
+          if (makeupStartInput) makeupStartInput.value = '';
+          if (thesisDeadlineInput) thesisDeadlineInput.value = '';
+
+          // 重要节点
+          if (militaryStartInput) militaryStartInput.value = '';
+          if (sportsDayInput) sportsDayInput.value = '';
+          if (anniversaryInput) anniversaryInput.value = '';
+          if (graduationStartInput) graduationStartInput.value = '';
+          if (enrollmentStartInput) enrollmentStartInput.value = '';
+
+          // 管理与服务信息
+          if (staffTrainingStartInput) staffTrainingStartInput.value = '';
+          if (physicalStartInput) physicalStartInput.value = '';
+          if (safetyEducationInput) safetyEducationInput.value = '';
+
+          // 校园活动
+          if (jobFairInput) jobFairInput.value = '';
+          if (campusOpenDayInput) campusOpenDayInput.value = '';
+        }
+
+        modal.classList.add('active');
+      }
+
+      // 关闭学期弹窗
+      window.closeTermModal = function () {
+        const modal = document.getElementById('termModal');
+        if (modal) {
+          modal.classList.remove('active');
+        }
+      }
+
+      // 保存学期
+      window.saveTerm = async function () {
+        const termId = document.getElementById('termId').value;
+        const termName = document.getElementById('modalTermName').value;
+        const startDate = document.getElementById('modalStartDate').value;
+        const endDate = document.getElementById('modalEndDate').value;
+        const holidaysInput = document.getElementById('modalHolidays').value;
+        const labOpenDaysInput = document.getElementById('modalLabOpenDays').value;
+
+        const holidayDates = holidaysInput ? holidaysInput.split(',').map(date => date.trim()) : [];
+        const labOpenDays = labOpenDaysInput ? labOpenDaysInput.split(',').map(date => date.trim()) : [];
+
+        if (!termName || !startDate || !endDate) {
+          showToast('请填写完整学期信息', true);
+          return;
+        }
+
+        const body = {
+          termName,
+          startDate,
+          endDate,
+          holidayDates,
+          labOpenDays,
+          totalWeeks: Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24 * 7))
+        };
+
+        try {
+          if (termId) {
+            await fetchWithToken(`/api/terms/${termId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            showToast('学期修改成功');
+          } else {
+            await fetchWithToken('/api/terms', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            showToast('学期新增成功');
+          }
+          closeTermModal();
+          await loadTerms();
+        } catch (e) {
+          showToast('保存学期失败: ' + e.message, true);
+        }
+      }
+
+      // 删除学期
+      window.deleteTerm = async function () {
+        if (!currentTerm) return;
+        if (!confirm('确定要删除这个学期吗？')) return;
+
+        try {
+          await fetchWithToken(`/api/terms/${currentTerm.id}`, { method: 'DELETE' });
+          showToast('学期删除成功');
+          await loadTerms();
+        } catch (e) {
+          showToast('删除学期失败: ' + e.message, true);
+        }
+      }
+
+      // 刷新校历
+      function refreshCalendar() {
+        loadYearCalendar();
+      }
+
+      // 绑定学期选择事件
+      document.getElementById('termSelect').addEventListener('change', function () {
+        selectTerm(parseInt(this.value));
+      });
+
+      // 绑定年月选择事件
+      document.getElementById('yearSelect').addEventListener('change', loadYearCalendar);
+      document.getElementById('monthSelect').addEventListener('change', loadYearCalendar);
+
+      // 初始化场馆状态
+      initVenueStatus();
+    };
+
+
+  </script>
+</body>
+
+</html>

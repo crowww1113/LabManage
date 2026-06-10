@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>排课与预约审批中心</title>
+    <script src="api-fetch.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; padding: 20px; background: #fff; color: #333; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+        label { font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        textarea { min-height: 80px; resize: vertical; }
+        .btn { padding: 9px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: #fff; font-size: 14px; }
+        .btn:hover { background: #0056b3; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; vertical-align: top; }
+        th { background: #f5f5f5; }
+        tr:hover { background: #fafafa; }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        .status { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: #eef2f7; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d4edda; color: #155724; }
+        .status-rejected { background: #f8d7da; color: #721c24; }
+        .empty { padding: 24px; text-align: center; color: #666; border: 1px dashed #ddd; border-radius: 4px; }
+        .modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; }
+        .modal-content { background: #fff; width: 90%; max-width: 500px; margin: 10% auto; border-radius: 8px; padding: 24px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; font-size: 20px; }
+        .close { font-size: 28px; cursor: pointer; color: #999; }
+        .close:hover { color: #333; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 15px; }
+        .tab:hover { background: #f5f5f5; }
+        .tab.active { border-bottom-color: #007bff; color: #007bff; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .badge { display: inline-block; background: #dc3545; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 12px; margin-left: 6px; }
+        .info-bar { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 16px; }
+        .info-bar p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+<h1>排课与预约审批中心</h1>
+
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('application')">
+        排课申请 <span id="applicationBadge" class="badge" style="display:none">0</span>
+    </div>
+    <div class="tab" onclick="switchTab('reservation')">
+        临时预约 <span id="reservationBadge" class="badge" style="display:none">0</span>
+    </div>
+</div>
+
+<div id="tab-application" class="tab-content active">
+    <div class="toolbar">
+        <div class="form-group">
+            <label>学期</label>
+            <select id="filterAppTermId" onchange="loadApplications()">
+                <option value="">全部学期</option>
+            </select>
+        </div>
+        <button class="btn" onclick="loadApplications()">刷新</button>
+    </div>
+    <div id="applicationTableWrapper"></div>
+</div>
+
+<div id="tab-reservation" class="tab-content">
+    <div class="toolbar">
+        <div class="form-group">
+            <label>学期</label>
+            <select id="filterResvTermId" onchange="loadReservations()">
+                <option value="">全部学期</option>
+            </select>
+        </div>
+        <button class="btn" onclick="loadReservations()">刷新</button>
+    </div>
+    <div id="reservationTableWrapper"></div>
+</div>
+
+<!-- 审批对话框 -->
+<div id="approvalModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="approvalModalTitle">审批确认</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="info-bar" id="approvalInfo"></div>
+        <div class="form-group">
+            <label>审批意见</label>
+            <textarea id="reviewComment" placeholder="请输入审批意见（可选）"></textarea>
+        </div>
+        <input id="approvalId" type="hidden">
+        <input id="approvalType" type="hidden">
+        <input id="approvalAction" type="hidden">
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+            <button id="approvalSubmitBtn" class="btn" onclick="submitApproval()">确认</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const loginUser = JSON.parse(localStorage.getItem('loginUser') || '{}');
+    const operatorId = loginUser.id;
+
+    let applicationList = [];
+    let reservationList = [];
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.closest('.tab').classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    function statusText(status) {
+        const map = {
+            DRAFT: '草稿', SUBMITTED: '已提交', APPROVING: '审批中',
+            APPROVED: '已通过', REJECTED: '已驳回', WITHDRAWN: '已撤回',
+            PENDING: '待审批', CANCELLED: '已取消'
+        };
+        return map[status] || status || '-';
+    }
+
+    function formatDay(d) {
+        return ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'][d] || '-';
+    }
+
+    function formatTime(item) {
+        if (item.startTime && item.endTime) {
+            return `${item.startTime} - ${item.endTime}`;
+        }
+        if (item.preferredTimeSlotId) return `节次${item.preferredTimeSlotId}`;
+        return '-';
+    }
+
+    function renderApplicationTable(list) {
+        const wrapper = document.getElementById('applicationTableWrapper');
+        const pendingList = list.filter(item => item.status === 'SUBMITTED' || item.status === 'APPROVING');
+        updateBadge('applicationBadge', pendingList.length);
+
+        if (!Array.isArray(list) || list.length === 0) {
+            wrapper.innerHTML = '<div class="empty">暂无排课申请</div>';
+            return;
+        }
+
+        wrapper.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>申请单号</th>
+                        <th>项目名称</th>
+                        <th>项目类别</th>
+                        <th>项目负责人</th>
+                        <th>联系电话</th>
+                        <th>申请时间</th>
+                        <th>实验室</th>
+                        <th>拟占用时段</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${list.map(item => `
+                        <tr>
+                            <td>${item.applicationNo || '-'}</td>
+                            <td title="${item.projectName || ''}">${(item.projectName || '-').substring(0, 15)}${(item.projectName || '').length > 15 ? '...' : ''}</td>
+                            <td>${item.projectCategory || '-'}</td>
+                            <td>${item.projectLeader || '-'}</td>
+                            <td>${item.contactPhone || '-'}</td>
+                            <td>${item.preferredDate || '-'}</td>
+                            <td>${item.preferredBuildingName || '-'} ${item.preferredRoomNumber || ''}</td>
+                            <td>${formatTime(item)}</td>
+                            <td><span class="status status-${(item.status || '').toLowerCase()}">${statusText(item.status)}</span></td>
+                            <td>
+                                <div class="actions">
+                                    ${(item.status === 'SUBMITTED' || item.status === 'APPROVING') ? `
+                                        <button class="btn btn-success" onclick="openApprovalModal(${item.id}, 'application', 'approve', '${item.applicationNo}', '${item.teacherId}')">通过</button>
+                                        <button class="btn btn-danger" onclick="openApprovalModal(${item.id}, 'application', 'reject', '${item.applicationNo}', '${item.teacherId}')">驳回</button>
+                                    ` : '-'}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function renderReservationTable(list) {
+        // 过滤掉属于集中排课批次的子预约，由批次级别统一处理
+        list = list.filter(item => !item.bookingId);
+        const wrapper = document.getElementById('reservationTableWrapper');
+        const pendingList = list.filter(item => item.status === 'PENDING' || item.status === 'SUBMITTED' || item.status === 'APPROVING');
+        updateBadge('reservationBadge', pendingList.length);
+
+        if (!Array.isArray(list) || list.length === 0) {
+            wrapper.innerHTML = '<div class="empty">暂无临时预约</div>';
+            return;
+        }
+
+        wrapper.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>预约单号</th>
+                        <th>项目名称</th>
+                        <th>项目类别</th>
+                        <th>项目负责人</th>
+                        <th>联系电话</th>
+                        <th>使用日期</th>
+                        <th>实验室</th>
+                        <th>时段</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${list.map(item => `
+                        <tr>
+                            <td>${item.reservationNo || '-'}</td>
+                            <td title="${item.projectName || ''}">${(item.projectName || '-').substring(0, 15)}${(item.projectName || '').length > 15 ? '...' : ''}</td>
+                            <td>${item.projectCategory || '-'}</td>
+                            <td>${item.projectLeader || '-'}</td>
+                            <td>${item.contactPhone || '-'}</td>
+                            <td>${item.useDate || '-'}</td>
+                            <td>${item.buildingName || '-'} ${item.roomNumber || ''}</td>
+                            <td>${formatTime(item)}</td>
+                            <td><span class="status status-${(item.status || '').toLowerCase()}">${statusText(item.status)}</span></td>
+                            <td>
+                                <div class="actions">
+                                    ${(item.status === 'PENDING' || item.status === 'SUBMITTED' || item.status === 'APPROVING') ? `
+                                        <button class="btn btn-success" onclick="openApprovalModal(${item.id}, 'reservation', 'approve', '${item.reservationNo}', '${item.teacherId}')">通过</button>
+                                        <button class="btn btn-danger" onclick="openApprovalModal(${item.id}, 'reservation', 'reject', '${item.reservationNo}', '${item.teacherId}')">驳回</button>
+                                    ` : '-'}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function updateBadge(id, count) {
+        const badge = document.getElementById(id);
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    async function loadApplications() {
+        try {
+            const params = new URLSearchParams();
+            const termId = document.getElementById('filterAppTermId').value;
+            if (termId) params.set('termId', termId);
+            const query = params.toString() ? `?${params.toString()}` : '';
+            const list = await apiFetch(`/api/schedule-applications${query}`);
+            applicationList = list || [];
+            renderApplicationTable(applicationList);
+        } catch (error) {
+            alert('加载排课申请失败：' + error.message);
+        }
+    }
+
+    async function loadReservations() {
+        try {
+            const params = new URLSearchParams();
+            const termId = document.getElementById('filterResvTermId').value;
+            if (termId) params.set('termId', termId);
+            const query = params.toString() ? `?${params.toString()}` : '';
+            const list = await apiFetch(`/api/schedule-reservations${query}`);
+            reservationList = list || [];
+            renderReservationTable(reservationList);
+        } catch (error) {
+            alert('加载预约失败：' + error.message);
+        }
+    }
+
+    function openApprovalModal(id, type, action, no, teacherId) {
+        document.getElementById('approvalId').value = id;
+        document.getElementById('approvalType').value = type;
+        document.getElementById('approvalAction').value = action;
+        document.getElementById('reviewComment').value = '';
+
+        const title = action === 'approve' ? '通过审批' : '驳回申请';
+        document.getElementById('approvalModalTitle').textContent = title;
+
+        // 获取详细信息
+        const list = type === 'application' ? applicationList : reservationList;
+        const item = list.find(i => i.id === id);
+
+        const typeName = type === 'application' ? '排课申请' : '临时预约';
+        let infoHtml = `
+            <p><strong>类型：</strong>${typeName}</p>
+            <p><strong>单号：</strong>${no || '-'}</p>
+            <p><strong>申请人ID：</strong>${teacherId || '-'}</p>
+        `;
+
+        if (item) {
+            infoHtml += `
+                <p><strong>项目名称：</strong>${item.projectName || '-'}</p>
+                <p><strong>项目类别：</strong>${item.projectCategory || '-'}</p>
+                <p><strong>项目负责人：</strong>${item.projectLeader || '-'}</p>
+                <p><strong>联系电话：</strong>${item.contactPhone || '-'}</p>
+            `;
+        }
+
+        document.getElementById('approvalInfo').innerHTML = infoHtml;
+
+        const submitBtn = document.getElementById('approvalSubmitBtn');
+        submitBtn.textContent = action === 'approve' ? '确认通过' : '确认驳回';
+        submitBtn.className = action === 'approve' ? 'btn btn-success' : 'btn btn-danger';
+
+        document.getElementById('approvalModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('approvalModal').style.display = 'none';
+        document.getElementById('approvalSubmitBtn').style.display = '';
+        document.getElementById('reviewComment').parentElement.style.display = '';
+    }
+
+    async function submitApproval() {
+        const id = document.getElementById('approvalId').value;
+        const type = document.getElementById('approvalType').value;
+        const action = document.getElementById('approvalAction').value;
+        const commentStr = document.getElementById('reviewComment').value.trim() || '';
+
+        // 驳回时强制要求填写原因
+        if (action !== 'approve' && !commentStr) {
+            alert('请输入驳回原因');
+            return;
+        }
+
+        try {
+            const url = type === 'application'
+                ? `/api/schedule-applications/${id}/${action}`
+                : `/api/schedule-reservations/${id}/${action}`;
+
+            const requestBody = {
+                reviewerId: operatorId,
+                operatorId: operatorId,
+                reviewComment: commentStr || null,
+                reason: commentStr || null
+            };
+
+            await apiFetch(url, {
+                method: 'POST',
+                body: JSON.stringify(requestBody)
+            });
+
+            alert(action === 'approve' ? '审批通过成功' : '驳回成功');
+            closeModal();
+            await Promise.all([loadApplications(), loadReservations()]);
+        } catch (error) {
+            alert('操作失败：' + error.message);
+        }
+    }
+
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('approvalModal')) {
+            closeModal();
+        }
+    };
+
+    function getUrlParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
+    }
+
+    async function initFromUrl() {
+        const type = getUrlParam('type');
+        const id = getUrlParam('id');
+        const sourceNo = getUrlParam('sourceNo');
+        const teacherName = getUrlParam('teacherName');
+
+        await Promise.all([loadApplications(), loadReservations()]);
+
+        if (type && id) {
+            if (type === 'application') {
+                switchTabDirect('application');
+                const item = applicationList.find(i => String(i.id) === id);
+                if (item) {
+                    openApprovalModal(item.id, 'application', 'approve',
+                        item.applicationNo || sourceNo || '',
+                        item.teacherId || teacherName || '');
+                }
+            } else if (type === 'reservation') {
+                switchTabDirect('reservation');
+                const item = reservationList.find(i => String(i.id) === id);
+                if (item) {
+                    openApprovalModal(item.id, 'reservation', 'approve',
+                        item.reservationNo || sourceNo || '',
+                        item.teacherId || teacherName || '');
+                }
+            }
+        }
+    }
+
+    function switchTabDirect(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const tabIndex = tab === 'application' ? '1' : '2';
+        const tabEl = document.querySelector(`.tab:nth-child(${tabIndex})`);
+        if (tabEl) tabEl.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    // 初始化
+    initFromUrl();
+
+    // 每10秒自动刷新，弹窗打开时跳过
+    setInterval(() => {
+        const modal = document.getElementById('approvalModal');
+        if (modal && modal.style.display === 'block') return;
+        loadApplications();
+        loadReservations();
+        loadReservations();
+    }, 10000);
+</script>
+</body>
+</html>

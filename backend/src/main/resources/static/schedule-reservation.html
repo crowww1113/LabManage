@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>集中排课工作台</title>
+<script src="api-fetch.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; background: #f0f2f5; color: #333; height: 100vh; display: flex; flex-direction: column; }
+.header { background: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; }
+.header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+.header .subtitle { font-size: 13px; color: #999; margin-left: 12px; }
+.main { display: flex; flex: 1; overflow: hidden; }
+.panel { display: flex; flex-direction: column; overflow: hidden; }
+.panel-left { width: 420px; min-width: 380px; background: #fff; border-right: 1px solid #e8e8e8; }
+.panel-right { flex: 1; background: #fafafa; }
+.panel-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+.panel-header h2 { font-size: 15px; font-weight: 600; }
+.panel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+/* filter bar */
+.filter-bar { display: flex; gap: 10px; margin-bottom: 12px; }
+.filter-bar select, .filter-bar input { padding: 7px 10px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; background: #fff; }
+.filter-bar select { min-width: 140px; }
+.filter-bar input { flex: 1; min-width: 100px; }
+
+/* task list */
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-card { border: 1px solid #f0f0f0; border-radius: 8px; padding: 14px 16px; cursor: pointer; transition: all .15s; background: #fff; }
+.task-card:hover { border-color: #91caff; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.task-card.selected { border-color: #1677ff; background: #f0f5ff; }
+.task-card .task-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.task-card .course-name { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.task-card .task-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #e6f4ff; color: #1677ff; }
+.task-card .task-meta { font-size: 12px; color: #666; line-height: 1.8; }
+.task-card .task-meta span { margin-right: 14px; }
+.task-card .task-meta .label { color: #999; }
+.task-card .btn-schedule { margin-top: 10px; padding: 5px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; background: #1677ff; color: #fff; transition: all .15s; }
+.task-card .btn-schedule:hover { background: #4096ff; }
+
+/* form sections */
+.form-section { margin-bottom: 20px; }
+.form-section-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+.form-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-start; }
+.form-label { font-size: 13px; color: #333; font-weight: 500; min-width: 56px; line-height: 32px; }
+.form-input, .form-select { padding: 7px 10px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; }
+.form-input { width: 180px; }
+.form-select { min-width: 100px; }
+
+/* week checkboxes */
+.week-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.week-grid .week-chip { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 32px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all .15s; background: #fff; user-select: none; }
+.week-grid .week-chip:hover { border-color: #91caff; }
+.week-grid .week-chip.checked { background: #1677ff; color: #fff; border-color: #1677ff; }
+.week-quick-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+.week-quick-btns button { padding: 4px 14px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; cursor: pointer; font-size: 12px; transition: all .15s; }
+.week-quick-btns button:hover { border-color: #1677ff; color: #1677ff; }
+
+/* time slot chips */
+.slot-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.slot-chip { display: inline-flex; align-items: center; padding: 6px 14px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all .15s; background: #fff; user-select: none; }
+.slot-chip:hover { border-color: #91caff; }
+.slot-chip.checked { background: #1677ff; color: #fff; border-color: #1677ff; }
+
+/* buttons */
+.btn { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all .15s; }
+.btn-primary { background: #1677ff; color: #fff; }
+.btn-primary:hover { background: #4096ff; }
+.btn-primary:disabled { background: #b3d8ff; cursor: not-allowed; }
+.btn-outline { background: #fff; color: #1677ff; border: 1px solid #1677ff; }
+.btn-outline:hover { background: #f0f5ff; }
+
+/* lab cards */
+.lab-list { display: flex; flex-direction: column; gap: 8px; }
+.lab-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: all .15s; background: #fff; }
+.lab-card:hover { border-color: #91caff; }
+.lab-card.available.selected { border-color: #1677ff; background: #f0f5ff; }
+.lab-card.unavailable { opacity: .55; cursor: not-allowed; background: #fafafa; }
+.lab-card input[type=radio] { accent-color: #1677ff; width: 16px; height: 16px; }
+.lab-card .lab-info { flex: 1; }
+.lab-card .lab-name { font-size: 14px; font-weight: 600; }
+.lab-card .lab-status { font-size: 12px; margin-top: 2px; }
+.lab-card .lab-status.free { color: #52c41a; }
+.lab-card .lab-status.busy { color: #ff4d4f; }
+.lab-card .conflict-detail { font-size: 11px; color: #999; margin-top: 2px; }
+
+/* right panel placeholder */
+.empty-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #bbb; }
+.empty-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-placeholder p { font-size: 14px; }
+
+/* toast */
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 9999; animation: slideIn .3s; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.toast.success { background: #52c41a; }
+.toast.error { background: #ff4d4f; }
+.toast.info { background: #1677ff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.selected-task-info { background: #f0f5ff; border: 1px solid #b3d8ff; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; }
+.selected-task-info .task-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.selected-task-info .task-detail { font-size: 12px; color: #666; margin-top: 4px; }
+
+/* scrollbar */
+.panel-body::-webkit-scrollbar { width: 6px; }
+.panel-body::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 3px; }
+
+/* apply tag */
+.apply-tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; margin-left: 8px; vertical-align: middle; font-weight: 400; }
+
+/* highlight input */
+.highlight-input { background: #e6f4ff !important; border-color: #91caff !important; box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div><h1>集中排课工作台<span class="subtitle">Schedule Workbench</span></h1></div>
+    <span style="font-size:13px;color:#999;" id="headerUser"></span>
+</div>
+
+<div class="main">
+    <!-- ====== 左侧：教学任务列表 ====== -->
+    <div class="panel panel-left">
+        <div class="panel-header">
+            <h2>教学任务列表</h2>
+        </div>
+        <div class="panel-body" style="padding-top:12px;">
+            <div class="filter-bar">
+                <select id="filterTerm" onchange="loadTasks()"></select>
+                <input type="text" id="filterKeyword" placeholder="搜索课程/教师/班级..." oninput="renderTasks()">
+            </div>
+            <div class="task-list" id="taskList">
+                <div class="empty-placeholder" style="height:200px;"><p>加载中...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 右侧：排课面板 ====== -->
+    <div class="panel panel-right" id="rightPanel">
+        <div class="panel-header">
+            <h2>批量排课</h2>
+        </div>
+        <div class="panel-body" id="rightBody">
+            <div class="empty-placeholder" id="emptyHint">
+                <div class="icon">&#x1F4C5;</div>
+                <p>点击左侧任务列表中的「去排课」开始</p>
+            </div>
+
+            <div id="scheduleForm" style="display:none;">
+                <!-- 当前选中任务 -->
+                <div class="selected-task-info" id="selectedTaskInfo"></div>
+
+                <!-- 周次选择 -->
+                <div class="form-section">
+                    <div class="form-section-title">&#x1F4C6; 周次选择 <span style="font-weight:400;color:#999;font-size:11px;">（第1-20周）</span></div>
+                    <div class="week-quick-btns">
+                        <button onclick="quickSelectWeeks('odd')">单周</button>
+                        <button onclick="quickSelectWeeks('even')">双周</button>
+                        <button onclick="quickSelectWeeks('all')">全选</button>
+                        <button onclick="quickSelectWeeks('clear')">清空</button>
+                    </div>
+                    <div class="week-grid" id="weekGrid"></div>
+                </div>
+
+                <!-- 时间选择 -->
+                <div class="form-section">
+                    <div class="form-section-title">&#x1F552; 时间选择</div>
+                    <div class="form-row">
+                        <span class="form-label">星期</span>
+                        <select class="form-select" id="dayOfWeek" onchange="clearLabResults();checkRealTimeConflict()">
+                            <option value="1">周一</option><option value="2">周二</option>
+                            <option value="3">周三</option><option value="4">周四</option>
+                            <option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">节次</span>
+                        <div class="slot-chips" id="slotChips"></div>
+                    </div>
+                </div>
+
+                <!-- 实验室选择 -->
+                <div class="form-section">
+                    <div class="form-section-title">&#x1F3E2; 实验室选择</div>
+                    <div class="form-row">
+                        <span class="form-label">楼栋</span>
+                        <input class="form-input" id="buildingName" list="buildingSuggest" oninput="clearLabResults()" onchange="checkRealTimeConflict()">
+                        <datalist id="buildingSuggest"></datalist>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">房间</span>
+                        <input class="form-input" id="roomNumber"onchange="checkRealTimeConflict()">
+                    </div>
+                    <button class="btn btn-primary" id="btnQueryLab" onclick="queryAvailability()">查询可用实验室</button>
+                    <span style="margin-left:10px;font-size:12px;color:#999;" id="queryHint"></span>
+                </div>
+
+                <!-- 可用实验室列表 -->
+                <div class="form-section" id="labResultSection" style="display:none;">
+                    <div class="form-section-title">&#x1F4CB; 实验室可用性</div>
+                    <div class="lab-list" id="labList"></div>
+                </div>
+
+                <!-- 其他信息 -->
+                <div class="form-section">
+                    <div class="form-section-title">&#x1F4DD; 排课信息</div>
+                    <div class="form-row">
+                        <span class="form-label">实验内容</span>
+                        <textarea class="form-input" id="experimentContent" style="width:100%;height:72px;resize:vertical;" placeholder="请输入实验内容"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">学生人数</span>
+                        <input class="form-input" type="number" id="studentCount" value="30" min="1">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">分组数</span>
+                        <input class="form-input" type="number" id="groupCount" value="5" min="1">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">每组人数</span>
+                        <input class="form-input" type="number" id="studentsPerGroup" value="6" min="1">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">备注</span>
+                        <input class="form-input" id="remark" placeholder="可选">
+                    </div>
+                </div>
+
+                <div id="conflictHint" style="display:none;padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:13px;text-align:center;"></div>
+                <button class="btn btn-primary" id="btnSubmit" onclick="submitBatch()" style="width:100%;height:44px;font-size:15px;">确认排课</button>
+                <div id="submitMsg" style="margin-top:8px;font-size:12px;text-align:center;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== 全局状态 ====================
+let allTasks = [];
+let allCourses = {};
+let allUsers = {};
+let allClasses = {};
+let allTerms = {};
+let allBuildings = new Set();
+let selectedTaskId = null;
+let selectedWeeks = [];
+let selectedSlotIds = [];
+let labResults = [];
+let selectedLabIndex = -1;
+
+// ==================== 工具函数 ====================
+function getSelectedFilterTermId() {
+    const value = document.getElementById('filterTerm').value;
+    return value ? Number(value) : null;
+}
+
+function getSelectedTask() {
+    return allTasks.find(t => t.id === selectedTaskId) || null;
+}
+
+function ensureTaskTermMatchesFilter(task) {
+    const filterTermId = getSelectedFilterTermId();
+    if (!task || !filterTermId || task.termId === filterTermId) {
+        return true;
+    }
+    const filterTermName = allTerms[filterTermId] || `ID=${filterTermId}`;
+    const taskTermName = allTerms[task.termId] || `ID=${task.termId}`;
+    toast(`当前学期为${filterTermName}，所选教学任务属于${taskTermName}，请重新选择任务`, 'error');
+    return false;
+}
+
+function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+// ==================== 初始化 ====================
+async function init() {
+    // 显示用户
+    try {
+        const lu = JSON.parse(localStorage.getItem('loginUser') || '{}');
+        document.getElementById('headerUser').textContent = lu.realName || lu.username || '';
+    } catch(e) {}
+
+    // 加载基础数据
+    await Promise.all([loadTerms(), loadTimeSlots(), loadCourses(), loadUsers(), loadClasses()]);
+    await loadTasks();
+    renderWeekGrid();
+}
+
+async function loadTerms() {
+    try {
+        const terms = await apiFetch('/api/terms');
+        const sel = document.getElementById('filterTerm');
+        const today = new Date().toISOString().slice(0, 10);
+        let selectedId = null;
+        terms.forEach(t => {
+            allTerms[t.id] = t.termName;
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.termName;
+            if (today >= t.startDate && today <= t.endDate) selectedId = t.id;
+            sel.appendChild(opt);
+        });
+        if (selectedId) sel.value = selectedId;
+        else if (terms.length > 0) sel.value = terms[terms.length - 1].id;
+    } catch(e) { console.warn('加载学期失败', e); }
+}
+
+async function loadTimeSlots() {
+    try {
+        const slots = await apiFetch('/api/time-slots');
+        const container = document.getElementById('slotChips');
+        container.innerHTML = slots.map(s => {
+            const st = (s.startTime || '').substring(0, 5);
+            const et = (s.endTime || '').substring(0, 5);
+            return `<span class="slot-chip" data-id="${s.id}" onclick="toggleSlot(this,${s.id})">${s.slotName}<br><small>${st}-${et}</small></span>`;
+        }).join('');
+    } catch(e) { console.warn('加载节次失败', e); }
+}
+
+async function loadCourses() {
+    try {
+        const list = await apiFetch('/api/teach/courses');
+        list.forEach(c => { allCourses[c.id] = c.cnName || c.code; });
+    } catch(e) { console.warn('加载课程失败', e); }
+}
+
+async function loadUsers() {
+    try {
+        const list = await apiFetch('/api/users');
+        list.forEach(u => { allUsers[u.id] = u.realName || u.username; });
+    } catch(e) { console.warn('加载用户失败', e); }
+}
+
+async function loadClasses() {
+    try {
+        const list = await apiFetch('/api/clazzes');
+        list.forEach(c => { allClasses[c.id] = c.clazzName; });
+    } catch(e) { console.warn('加载班级失败', e); }
+}
+
+async function loadTasks() {
+    try {
+        const termId = document.getElementById('filterTerm').value;
+        let url = '/api/teaching-tasks';
+        if (termId) url += '?termId=' + termId;
+        allTasks = await apiFetch(url);
+
+        // 从 reservation 中收集楼栋信息
+        try {
+            const reservations = await apiFetch('/api/schedule-reservations');
+            reservations.forEach(r => {
+                if (r.buildingName) allBuildings.add(r.buildingName);
+            });
+        } catch(e) {}
+
+        updateBuildingSuggest();
+        renderTasks();
+    } catch(e) {
+        console.error('加载教学任务失败', e);
+        toast('加载教学任务失败: ' + e.message, 'error');
+    }
+}
+
+function updateBuildingSuggest() {
+    const datalist = document.getElementById('buildingSuggest');
+    datalist.innerHTML = [...allBuildings].map(b => `<option value="${b}">`).join('');
+}
+
+// ==================== 任务列表渲染 ====================
+function renderTasks() {
+    const keyword = (document.getElementById('filterKeyword').value || '').toLowerCase();
+    let filtered = allTasks;
+    if (keyword) {
+        filtered = allTasks.filter(t => {
+            const courseName = (allCourses[t.courseId] || '').toLowerCase();
+            const teacherNames = (t.teacherIds || []).map(tid => (allUsers[tid] || '').toLowerCase()).join(' ');
+            const className = (allClasses[t.clazzId] || '').toLowerCase();
+            return courseName.includes(keyword) || teacherNames.includes(keyword) || className.includes(keyword);
+        });
+    }
+
+    const container = document.getElementById('taskList');
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-placeholder" style="height:200px;"><p>暂无教学任务</p></div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(t => {
+        const teacherNames = (t.teacherIds || []).map(tid => allUsers[tid] || '未知教师').join('、');
+        const courseName = allCourses[t.courseId] || '未知课程';
+        const className = allClasses[t.clazzId] || '未知班级';
+        const termName = allTerms[t.termId] || '未知学期';
+        const selected = t.id === selectedTaskId ? ' selected' : '';
+        const hasApply = t.applicationInfo != null;
+        const applyTag = hasApply ? '<span class="apply-tag">授课申请</span>' : '';
+        return `<div class="task-card${selected}" onclick="selectTask(${t.id})" data-id="${t.id}">
+            <div class="task-top">
+                <span class="course-name">${escHtml(courseName)}${applyTag}</span>
+                <span class="task-status">${escHtml(t.status || '进行中')}</span>
+            </div>
+            <div class="task-meta">
+                <span><span class="label">学期：</span>${escHtml(termName)}</span>
+                <span><span class="label">教师：</span>${escHtml(teacherNames)}</span>
+                <span><span class="label">班级：</span>${escHtml(className)}</span>
+            </div>
+            <button class="btn-schedule" onclick="event.stopPropagation();selectTask(${t.id})">去排课 &rarr;</button>
+        </div>`;
+    }).join('');
+}
+
+function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== 选择任务 ====================
+function selectTask(taskId) {
+    selectedTaskId = taskId;
+    document.querySelectorAll('.task-card').forEach(el => el.classList.remove('selected'));
+    const card = document.querySelector(`.task-card[data-id="${taskId}"]`);
+    if (card) card.classList.add('selected');
+
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // 显示右侧表单
+    document.getElementById('emptyHint').style.display = 'none';
+    document.getElementById('scheduleForm').style.display = 'block';
+
+    const teacherNames = (task.teacherIds || []).map(tid => allUsers[tid] || '未知教师').join('、');
+    const courseName = allCourses[task.courseId] || '未知课程';
+    const className = allClasses[task.clazzId] || '未知班级';
+
+    const applyInfo = task.applicationInfo;
+    const applyHint = applyInfo ? ' &nbsp;|&nbsp; <span style="color:#52c41a;">含授课申请</span>' : '';
+    document.getElementById('selectedTaskInfo').innerHTML =
+        `<div class="task-title">${escHtml(courseName)}</div>
+         <div class="task-detail">教师：${escHtml(teacherNames)} &nbsp;|&nbsp; 班级：${escHtml(className)} &nbsp;|&nbsp; 状态：${escHtml(task.status || '进行中')}${applyHint}</div>`;
+
+    // 处理授课申请自动填充
+    clearApplyHighlights();
+    if (applyInfo) {
+        // 填充周次
+        if (applyInfo.targetWeeks) {
+            const weeks = parseWeekRange(applyInfo.targetWeeks);
+            selectedWeeks = weeks;
+            document.querySelectorAll('#weekGrid .week-chip').forEach(chip => {
+                const w = parseInt(chip.dataset.week);
+                chip.classList.toggle('checked', weeks.includes(w));
+            });
+        }
+        // 填充星期
+        if (applyInfo.targetDayOfWeek) {
+            const daySelect = document.getElementById('dayOfWeek');
+            daySelect.value = applyInfo.targetDayOfWeek;
+            daySelect.classList.add('highlight-input');
+        }
+        // 填充节次
+        if (applyInfo.targetTimeSlot) {
+            const slots = parseTimeSlotRange(applyInfo.targetTimeSlot);
+            selectedSlotIds = [];
+            document.querySelectorAll('#slotChips .slot-chip').forEach(chip => {
+                const id = parseInt(chip.dataset.id);
+                const match = slots.some(s => {
+                    const name = chip.textContent.trim();
+                    return name.includes(s);
+                });
+                chip.classList.toggle('checked', match);
+                if (match) selectedSlotIds.push(id);
+            });
+            document.querySelectorAll('#slotChips .slot-chip.checked').forEach(el => {
+                el.classList.add('highlight-input');
+            });
+        }
+        // 高亮周次选择区
+        document.getElementById('weekGrid').classList.add('highlight-input');
+    }
+
+    // 重置实验室选择
+    labResults = [];
+    selectedLabIndex = -1;
+    document.getElementById('labResultSection').style.display = 'none';
+    document.getElementById('labList').innerHTML = '';
+    document.getElementById('queryHint').textContent = '';
+    document.getElementById('btnSubmit').disabled = true;
+}
+
+// ==================== 周次选择 ====================
+function renderWeekGrid() {
+    const grid = document.getElementById('weekGrid');
+    grid.innerHTML = '';
+    for (let i = 1; i <= 20; i++) {
+        const chip = document.createElement('span');
+        chip.className = 'week-chip';
+        chip.textContent = i;
+        chip.dataset.week = i;
+        chip.onclick = function() { toggleWeek(this, i); };
+        grid.appendChild(chip);
+    }
+}
+
+function toggleWeek(el, week) {
+    el.classList.toggle('checked');
+    if (el.classList.contains('checked')) {
+        if (!selectedWeeks.includes(week)) selectedWeeks.push(week);
+    } else {
+        selectedWeeks = selectedWeeks.filter(w => w !== week);
+    }
+    selectedWeeks.sort((a,b) => a-b);
+    clearLabResults();
+    updateQueryHint();
+    checkRealTimeConflict();
+}
+
+function quickSelectWeeks(type) {
+    const chips = document.querySelectorAll('#weekGrid .week-chip');
+    selectedWeeks = [];
+    chips.forEach(chip => {
+        const w = parseInt(chip.dataset.week);
+        let match = false;
+        if (type === 'all') match = true;
+        else if (type === 'odd') match = w % 2 === 1;
+        else if (type === 'even') match = w % 2 === 0;
+        if (match) {
+            chip.classList.add('checked');
+            selectedWeeks.push(w);
+        } else {
+            chip.classList.remove('checked');
+        }
+    });
+    clearLabResults();
+    updateQueryHint();
+    checkRealTimeConflict();
+}
+
+// ==================== 节次选择 ====================
+function toggleSlot(el, slotId) {
+    el.classList.toggle('checked');
+    if (el.classList.contains('checked')) {
+        if (!selectedSlotIds.includes(slotId)) selectedSlotIds.push(slotId);
+    } else {
+        selectedSlotIds = selectedSlotIds.filter(id => id !== slotId);
+    }
+    clearLabResults();
+    updateQueryHint();
+    checkRealTimeConflict();
+}
+
+function clearLabResults() {
+    labResults = [];
+    selectedLabIndex = -1;
+    document.getElementById('labResultSection').style.display = 'none';
+    document.getElementById('labList').innerHTML = '';
+    document.getElementById('btnSubmit').disabled = true;
+}
+
+function updateQueryHint() {
+    const hint = document.getElementById('queryHint');
+    if (selectedWeeks.length > 0 && selectedSlotIds.length > 0) {
+        hint.textContent = `已选 ${selectedWeeks.length} 周 x ${selectedSlotIds.length} 节次`;
+    } else {
+        hint.textContent = '';
+    }
+}
+
+// ==================== 实时冲突检测 ====================
+function checkRealTimeConflict() {
+    const buildingName = document.getElementById('buildingName').value.trim();
+    const roomNumber = document.getElementById('roomNumber').value.trim();
+    const dayOfWeek = parseInt(document.getElementById('dayOfWeek').value);
+    const hint = document.getElementById('conflictHint');
+    const btn = document.getElementById('btnSubmit');
+
+    // 参数不全，清空提示，恢复按钮
+    if (!buildingName || selectedWeeks.length === 0 || !dayOfWeek || selectedSlotIds.length === 0) {
+        hint.style.display = 'none';
+        if (!roomNumber) btn.disabled = true;
+        return;
+    }
+
+    const task = getSelectedTask();
+    if (!task) return;
+    if (!ensureTaskTermMatchesFilter(task)) {
+        document.getElementById('btnSubmit').disabled = true;
+        return;
+    }
+
+    const params = new URLSearchParams();
+    params.append('termId', task.termId);
+    params.append('dayOfWeek', dayOfWeek);
+    selectedWeeks.forEach(w => params.append('weeks', w));
+    selectedSlotIds.forEach(s => params.append('timeSlotIds', s));
+    params.append('buildingName', buildingName);
+
+    hint.style.display = 'block';
+    hint.style.background = '#f8f9fa';
+    hint.style.color = '#666';
+    hint.textContent = '⏳ 正在检测冲突...';
+
+    apiFetch('/api/schedule-reservations/labs/availability?' + params.toString())
+        .then(results => {
+            if (!results || results.length === 0) {
+                hint.textContent = '⚠️ 该楼栋暂无实验室数据';
+                hint.style.background = '#fff3cd';
+                hint.style.color = '#856404';
+                btn.disabled = true;
+                return;
+            }
+            if (roomNumber) {
+                const match = results.find(r => r.roomNumber === roomNumber);
+                if (match) {
+                    if (match.available) {
+                        hint.innerHTML = '✅ 该时段实验室可用';
+                        hint.style.background = '#d4edda';
+                        hint.style.color = '#155724';
+                        btn.disabled = false;
+                    } else {
+                        const c = match.conflicts && match.conflicts[0];
+                        const cInfo = c ? `（${c.courseName || ''}/${c.teacherName || ''}/第${c.weekNo}周 ${c.timeSlotName || ''}）` : '';
+                        hint.innerHTML = '⚠️ 该时段此实验室已被占用！' + cInfo;
+                        hint.style.background = '#f8d7da';
+                        hint.style.color = '#721c24';
+                        btn.disabled = true;
+                    }
+                } else {
+                    hint.innerHTML = '✅ 该房间未发现冲突记录';
+                    hint.style.background = '#d4edda';
+                    hint.style.color = '#155724';
+                    btn.disabled = false;
+                }
+            } else {
+                hint.textContent = '📋 已查询楼栋可用性，请输入房间号进行精确检测';
+                hint.style.background = '#e7f3ff';
+                hint.style.color = '#004085';
+                btn.disabled = true;
+            }
+        })
+        .catch(() => {
+            hint.style.display = 'none';
+        });
+}
+
+// ==================== 查询实验室可用性 ====================
+async function queryAvailability() {
+    const buildingName = document.getElementById('buildingName').value.trim();
+    if (!buildingName) { toast('请输入楼栋名称', 'error'); return; }
+    if (selectedWeeks.length === 0) { toast('请选择周次', 'error'); return; }
+    if (selectedSlotIds.length === 0) { toast('请选择节次', 'error'); return; }
+
+    const task = getSelectedTask();
+    if (!task) { toast('请先选择教学任务', 'error'); return; }
+    if (!ensureTaskTermMatchesFilter(task)) { return; }
+
+    const dayOfWeek = parseInt(document.getElementById('dayOfWeek').value);
+    const params = new URLSearchParams();
+    params.append('termId', task.termId);
+    params.append('dayOfWeek', dayOfWeek);
+    selectedWeeks.forEach(w => params.append('weeks', w));
+    selectedSlotIds.forEach(s => params.append('timeSlotIds', s));
+    params.append('buildingName', buildingName);
+
+    document.getElementById('btnQueryLab').disabled = true;
+    document.getElementById('btnQueryLab').textContent = '查询中...';
+
+    try {
+        labResults = await apiFetch('/api/schedule-reservations/labs/availability?' + params.toString());
+        selectedLabIndex = -1;
+        renderLabResults();
+        updateBuildingSuggest();
+        document.getElementById('labResultSection').style.display = 'block';
+        document.getElementById('btnSubmit').disabled = true;
+        document.getElementById('queryHint').textContent = `查询完成，共 ${labResults.length} 个实验室`;
+    } catch(e) {
+        toast('查询失败: ' + e.message, 'error');
+    } finally {
+        document.getElementById('btnQueryLab').disabled = false;
+        document.getElementById('btnQueryLab').textContent = '查询可用实验室';
+    }
+}
+
+function renderLabResults() {
+    const container = document.getElementById('labList');
+    if (labResults.length === 0) {
+        container.innerHTML = '<div class="empty-placeholder" style="height:120px;"><p>该楼栋暂无实验室数据</p></div>';
+        return;
+    }
+
+    // 按 buildingName + roomNumber 排序
+    labResults.sort((a,b) => (a.buildingName + a.roomNumber).localeCompare(b.buildingName + b.roomNumber));
+
+    container.innerHTML = labResults.map((lab, idx) => {
+        const available = lab.available;
+        const cls = available ? 'available' : 'unavailable';
+        const statusHtml = available
+            ? '<span class="lab-status free">&#x2713; 可用</span>'
+            : '<span class="lab-status busy">&#x2717; 已被占用</span>';
+
+        let conflictHtml = '';
+        if (lab.conflicts && lab.conflicts.length > 0) {
+            const c = lab.conflicts[0];
+            conflictHtml = `<div class="conflict-detail">占用：${escHtml(c.courseName)} / ${escHtml(c.teacherName)} / 第${c.weekNo}周 ${c.timeSlotName}</div>`;
+            if (lab.conflicts.length > 1) {
+                conflictHtml += `<div class="conflict-detail">...及其他 ${lab.conflicts.length - 1} 个冲突</div>`;
+            }
+        }
+
+        const selected = idx === selectedLabIndex ? ' selected' : '';
+
+        if (available) {
+            return `<div class="lab-card available${selected}" onclick="selectLab(${idx})">
+                <input type="radio" name="lab" ${selected ? 'checked' : ''}>
+                <div class="lab-info">
+                    <div class="lab-name">${escHtml(lab.buildingName)} ${escHtml(lab.roomNumber)}</div>
+                    ${statusHtml}
+                </div>
+            </div>`;
+        } else {
+            return `<div class="lab-card unavailable">
+                <input type="radio" name="lab" disabled>
+                <div class="lab-info">
+                    <div class="lab-name">${escHtml(lab.buildingName)} ${escHtml(lab.roomNumber)}</div>
+                    ${statusHtml}
+                    ${conflictHtml}
+                </div>
+            </div>`;
+        }
+    }).join('');
+}
+
+function selectLab(idx) {
+    selectedLabIndex = idx;
+    document.getElementById('roomNumber').value = labResults[idx].roomNumber;
+    document.getElementById('btnSubmit').disabled = false;
+    renderLabResults();
+}
+
+// ==================== 提交批量排课 ====================
+async function submitBatch(force) {
+    const buildingName = document.getElementById('buildingName').value.trim();
+    const roomNumber = document.getElementById('roomNumber').value.trim();
+    if (!buildingName || !roomNumber) { toast('请选择实验室', 'error'); return; }
+    if (selectedWeeks.length === 0) { toast('请选择周次', 'error'); return; }
+    if (selectedSlotIds.length === 0) { toast('请选择节次', 'error'); return; }
+
+    const task = getSelectedTask();
+    if (!task) { toast('请选择教学任务', 'error'); return; }
+    if (!ensureTaskTermMatchesFilter(task)) { return; }
+
+    const dayOfWeek = parseInt(document.getElementById('dayOfWeek').value);
+    const experimentContent = document.getElementById('experimentContent').value.trim();
+
+    const body = {
+        taskId: task.id,
+        weeks: selectedWeeks,
+        dayOfWeek: dayOfWeek,
+        timeSlotIds: selectedSlotIds,
+        buildingName: buildingName,
+        roomNumber: roomNumber,
+        force: !!force,
+        experimentContent: experimentContent,
+        studentCount: parseInt(document.getElementById('studentCount').value) || 30,
+        groupCount: parseInt(document.getElementById('groupCount').value) || null,
+        studentsPerGroup: parseInt(document.getElementById('studentsPerGroup').value) || null,
+        remark: document.getElementById('remark').value.trim() || null
+    };
+
+    document.getElementById('btnSubmit').disabled = true;
+    document.getElementById('btnSubmit').textContent = '提交中...';
+    document.getElementById('submitMsg').textContent = '';
+
+    try {
+        const resp = await apiFetch('/api/schedule-bookings/batch', {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        toast(`排课成功！共创建 ${resp.totalReservations} 条预约记录（批次：${resp.bookingNo}）`, 'success');
+        document.getElementById('submitMsg').innerHTML =
+            `<span style="color:#52c41a;">排课成功，批次号：${resp.bookingNo}，共${resp.totalReservations}条预约</span>`;
+        clearLabResults();
+        document.getElementById('btnSubmit').disabled = false;
+        document.getElementById('btnSubmit').textContent = '确认排课';
+    } catch(e) {
+        if (e.status === 409 && !force) {
+            // 软冲突 → 提示用户是否强制排课
+            document.getElementById('btnSubmit').disabled = false;
+            document.getElementById('btnSubmit').textContent = '确认排课';
+            if (confirm(e.message + '\n\n点击"确定"将强制排课（忽略教师/班级时间冲突），点击"取消"返回修改。')) {
+                submitBatch(true);
+            }
+        } else {
+            toast('排课失败: ' + e.message, 'error');
+            document.getElementById('submitMsg').innerHTML = `<span style="color:#ff4d4f;">${escHtml(e.message)}</span>`;
+            document.getElementById('btnSubmit').disabled = false;
+            document.getElementById('btnSubmit').textContent = '确认排课';
+        }
+    }
+}
+
+// ==================== 启动 ====================
+init();
+
+// ==================== 授课申请辅助函数 ====================
+function parseWeekRange(str) {
+    if (!str) return [];
+    const weeks = [];
+    str.split(',').forEach(part => {
+        part = part.trim();
+        if (part.includes('-')) {
+            const [start, end] = part.split('-').map(Number);
+            if (!isNaN(start) && !isNaN(end)) {
+                for (let i = start; i <= end; i++) weeks.push(i);
+            }
+        } else {
+            const n = parseInt(part);
+            if (!isNaN(n)) weeks.push(n);
+        }
+    });
+    return [...new Set(weeks)].sort((a, b) => a - b);
+}
+
+function parseTimeSlotRange(str) {
+    if (!str) return [];
+    // 支持 "1-2", "3-4", "1,3" 等格式，返回节次编号数组
+    const slots = [];
+    str.split(',').forEach(part => {
+        part = part.trim();
+        if (part.includes('-')) {
+            const [start, end] = part.split('-').map(Number);
+            if (!isNaN(start) && !isNaN(end)) {
+                for (let i = start; i <= end; i++) slots.push(String(i));
+            }
+        } else {
+            slots.push(part);
+        }
+    });
+    return slots;
+}
+
+function clearApplyHighlights() {
+    document.querySelectorAll('.highlight-input').forEach(el => el.classList.remove('highlight-input'));
+    // 如果没有授课申请，清空表单
+    const task = allTasks.find(t => t.id === selectedTaskId);
+    if (!task || !task.applicationInfo) {
+        selectedWeeks = [];
+        document.querySelectorAll('#weekGrid .week-chip').forEach(chip => chip.classList.remove('checked'));
+        document.getElementById('dayOfWeek').value = '1';
+        selectedSlotIds = [];
+        document.querySelectorAll('#slotChips .slot-chip').forEach(chip => chip.classList.remove('checked'));
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>库存与监控</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h2 { margin-bottom: 20px; color: #1a1a1a; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 10px 20px; border: 1px solid #e0e0e0; border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { background: #f0f0f0; }
+    .tab-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Toolbar */
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .toolbar select, .toolbar input {
+      padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;
+    }
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 500; transition: all 0.2s;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-warning { background: #f59e0b; color: #fff; }
+    .btn-warning:hover { background: #d97706; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+    th { background: #f8f9fa; font-weight: 600; color: #555; }
+    tr:hover { background: #f8f9fa; }
+
+    /* Cards view */
+    .cards-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .equip-card {
+      background: #fff; border-radius: 10px; padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;
+    }
+    .equip-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .equip-card h4 { margin-bottom: 8px; color: #1a1a1a; }
+    .equip-card .info { font-size: 13px; color: #666; line-height: 1.8; }
+    .equip-card .status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .status-available { background: #dcfce7; color: #166534; }
+    .status-borrowed { background: #fef3c7; color: #92400e; }
+    .status-repair { background: #fee2e2; color: #b91c1c; }
+    .status-reserved { background: #dbeafe; color: #1e40af; }
+
+    /* Stats cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: #fff; border-radius: 10px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;
+    }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #2563eb; }
+    .stat-card .label { font-size: 13px; color: #888; margin-top: 4px; }
+
+    /* Report table */
+    .report-section { margin-bottom: 24px; }
+    .report-section h3 { margin-bottom: 12px; color: #1a1a1a; font-size: 16px; }
+
+    /* Alert */
+    .alert-box { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .alert-danger { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+    .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+
+    .view-toggle { display: flex; gap: 4px; }
+    .view-toggle .btn { padding: 6px 12px; font-size: 12px; }
+    .view-toggle .btn.active { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>库存与监控</h2>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('realtime')">实时查询</button>
+      <button class="tab-btn" onclick="switchTab('summary')">设备总账</button>
+      <button class="tab-btn" onclick="switchTab('usage')">使用率统计</button>
+      <button class="tab-btn" onclick="switchTab('ledger')">借还流水账</button>
+      <button class="tab-btn" onclick="switchTab('status-dist')">状态分布</button>
+      <button class="tab-btn" onclick="switchTab('overdue-list')">逾期清单</button>
+      <button class="tab-btn" onclick="switchTab('repair')">故障维修</button>
+      <button class="tab-btn" onclick="switchTab('calibration')">检定到期</button>
+    </div>
+
+    <!-- 实时查询 -->
+    <div class="tab-content active" id="tab-realtime">
+      <div class="toolbar">
+        <select id="filterCategory"><option value="">全部类别</option></select>
+        <select id="filterLocation"><option value="">全部位置</option></select>
+        <select id="filterBrand"><option value="">全部品牌</option></select>
+        <select id="filterStatus">
+          <option value="">全部状态</option>
+          <option value="在库-可用">在库-可用</option>
+          <option value="已借出">已借出</option>
+          <option value="在库-待维修">在库-待维修</option>
+          <option value="送修">送修</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadInventory()">查询</button>
+        <div class="view-toggle">
+          <button class="btn btn-success active" id="btnListView" onclick="setView('list')">列表</button>
+          <button class="btn btn-success" id="btnCardView" onclick="setView('card')">卡片</button>
+        </div>
+        <button class="btn btn-warning" onclick="exportToExcel('inventory')">导出Excel</button>
+      </div>
+      <div id="inventoryList"></div>
+      <div id="inventoryCards" class="cards-view" style="display:none;"></div>
+    </div>
+
+    <!-- 设备总账 -->
+    <div class="tab-content" id="tab-summary">
+      <div id="summaryArea"></div>
+    </div>
+
+    <!-- 使用率统计 -->
+    <div class="tab-content" id="tab-usage">
+      <div id="usageArea"></div>
+    </div>
+
+    <!-- 借还流水账 -->
+    <div class="tab-content" id="tab-ledger">
+      <div class="toolbar">
+        <button class="btn btn-warning" onclick="exportToExcel('ledger')">导出Excel</button>
+      </div>
+      <div id="ledgerArea"></div>
+    </div>
+
+    <!-- 状态分布 -->
+    <div class="tab-content" id="tab-status-dist">
+      <div id="statusDistArea"></div>
+    </div>
+
+    <!-- 逾期清单 -->
+    <div class="tab-content" id="tab-overdue-list">
+      <div id="overdueListArea"></div>
+    </div>
+
+    <!-- 故障维修 -->
+    <div class="tab-content" id="tab-repair">
+      <div id="repairArea"></div>
+    </div>
+
+    <!-- 检定到期 -->
+    <div class="tab-content" id="tab-calibration">
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="checkCalibration()">触发检定检查</button>
+        <button class="btn btn-warning" onclick="exportToExcel('calibration')">导出Excel</button>
+      </div>
+      <div id="calibrationArea"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/inventory';
+    let currentView = 'list';
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+
+      // Load data on tab switch
+      switch(tabId) {
+        case 'realtime': loadInventory(); break;
+        case 'summary': loadSummary(); break;
+        case 'usage': loadUsageRate(); break;
+        case 'ledger': loadLedger(); break;
+        case 'status-dist': loadStatusDist(); break;
+        case 'overdue-list': loadOverdueList(); break;
+        case 'repair': loadRepairStats(); break;
+        case 'calibration': loadCalibrationDue(); break;
+      }
+    }
+
+    function setView(view) {
+      currentView = view;
+      document.getElementById('btnListView').classList.toggle('active', view === 'list');
+      document.getElementById('btnCardView').classList.toggle('active', view === 'card');
+      document.getElementById('inventoryList').style.display = view === 'list' ? 'block' : 'none';
+      document.getElementById('inventoryCards').style.display = view === 'card' ? 'grid' : 'none';
+    }
+
+    // ===== 实时查询 =====
+    function loadInventory() {
+      const category = document.getElementById('filterCategory').value;
+      const location = document.getElementById('filterLocation').value;
+      const brand = document.getElementById('filterBrand').value;
+      const status = document.getElementById('filterStatus').value;
+
+      let url = API_BASE + '/query?';
+      if (category) url += 'category=' + encodeURIComponent(category) + '&';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      if (brand) url += 'brand=' + encodeURIComponent(brand) + '&';
+      if (status) url += 'status=' + encodeURIComponent(status) + '&';
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          renderInventoryList(data);
+          renderInventoryCards(data);
+          populateFilters(data);
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    function populateFilters(data) {
+      const categories = [...new Set(data.map(d => d.category).filter(Boolean))];
+      const locations = [...new Set(data.map(d => d.location).filter(Boolean))];
+      const brands = [...new Set(data.map(d => d.brand).filter(Boolean))];
+
+      const catSel = document.getElementById('filterCategory');
+      if (catSel.options.length <= 1) {
+        categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
+      }
+      const locSel = document.getElementById('filterLocation');
+      if (locSel.options.length <= 1) {
+        locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; locSel.appendChild(o); });
+      }
+      const brandSel = document.getElementById('filterBrand');
+      if (brandSel.options.length <= 1) {
+        brands.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; brandSel.appendChild(o); });
+      }
+    }
+
+    function renderInventoryList(data) {
+      const container = document.getElementById('inventoryList');
+      if (data.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">暂无数据</p>';
+        return;
+      }
+      let html = '<table><thead><tr><th>资产编号</th><th>设备名称</th><th>型号</th><th>类别</th><th>品牌</th><th>存放位置</th><th>状态</th><th>责任人</th></tr></thead><tbody>';
+      data.forEach(d => {
+        html += `<tr>
+          <td>${d.assetNo || '-'}</td>
+          <td>${d.name || '-'}</td>
+          <td>${d.model || '-'}</td>
+          <td>${d.category || '-'}</td>
+          <td>${d.brand || '-'}</td>
+          <td>${d.location || '-'}</td>
+          <td><span class="status ${getStatusClass(d.status)}">${d.status || '-'}</span></td>
+          <td>${d.responsiblePerson || '-'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function renderInventoryCards(data) {
+      const container = document.getElementById('inventoryCards');
+      if (data.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;grid-column:1/-1;">暂无数据</p>';
+        return;
+      }
+      container.innerHTML = data.map(d => `
+        <div class="equip-card">
+          <h4>${d.name || '未命名'}</h4>
+          <div class="info">
+            <div>资产编号：${d.assetNo || '-'}</div>
+            <div>型号：${d.model || '-'}</div>
+            <div>类别：${d.category || '-'}</div>
+            <div>品牌：${d.brand || '-'}</div>
+            <div>位置：${d.location || '-'}</div>
+            <div>责任人：${d.responsiblePerson || '-'}</div>
+            <div>状态：<span class="status ${getStatusClass(d.status)}">${d.status || '-'}</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getStatusClass(status) {
+      if (status && status.includes('可用')) return 'status-available';
+      if (status && status.includes('借出')) return 'status-borrowed';
+      if (status && (status.includes('维修') || status.includes('送修'))) return 'status-repair';
+      if (status && status.includes('预约')) return 'status-reserved';
+      return '';
+    }
+
+    // ===== 设备总账 =====
+    function loadSummary() {
+      fetch(API_BASE + '/summary')
+        .then(res => res.json())
+        .then(data => {
+          let html = '<div class="stats-grid">';
+          html += `<div class="stat-card"><div class="value">${data.total}</div><div class="label">设备总数</div></div>`;
+          html += `<div class="stat-card"><div class="value">¥${(data.totalValue || 0).toLocaleString()}</div><div class="label">资产总值</div></div>`;
+          html += '</div>';
+
+          html += '<div class="report-section"><h3>分类统计</h3>';
+          html += '<table><thead><tr><th>分类</th><th>数量</th><th>资产值</th><th>占比</th></tr></thead><tbody>';
+          (data.categories || []).forEach(c => {
+            html += `<tr><td>${c.category}</td><td>${c.count}</td><td>¥${(c.value || 0).toLocaleString()}</td><td>${c.percentage}</td></tr>`;
+          });
+          html += '</tbody></table></div>';
+          document.getElementById('summaryArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    // ===== 使用率统计 =====
+    function loadUsageRate() {
+      fetch(API_BASE + '/usage-rate')
+        .then(res => res.json())
+        .then(data => {
+          let html = '<table><thead><tr><th>资产编号</th><th>设备名称</th><th>借用天数</th><th>总天数</th><th>使用率</th></tr></thead><tbody>';
+          data.forEach(d => {
+            html += `<tr><td>${d.assetNo}</td><td>${d.name}</td><td>${d.borrowDays}</td><td>${d.totalDays}</td><td>${d.usageRate}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('usageArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    // ===== 借还流水账 =====
+    function loadLedger() {
+      fetch(API_BASE + '/ledger')
+        .then(res => res.json())
+        .then(data => {
+          let html = '<table><thead><tr><th>记录编号</th><th>设备名称</th><th>资产编号</th><th>借用人</th><th>用途</th><th>状态</th><th>申请时间</th><th>借出日期</th><th>预计归还</th><th>实际归还</th><th>领取人</th><th>验收人</th><th>验收结果</th></tr></thead><tbody>';
+          data.forEach(d => {
+            html += `<tr><td>${d.recordNo}</td><td>${d.equipmentName || '-'}</td><td>${d.equipmentAssetNo || '-'}</td><td>${d.borrowerName || '-'}</td><td>${d.purpose || '-'}</td><td>${d.status}</td><td>${d.createTime || '-'}</td><td>${d.borrowDate || '-'}</td><td>${d.expectedReturnDate || '-'}</td><td>${d.actualReturnDate || '-'}</td><td>${d.pickupPersonName || '-'}</td><td>${d.verifierName || '-'}</td><td>${d.returnResult || '-'}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('ledgerArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    // ===== 状态分布 =====
+    function loadStatusDist() {
+      fetch(API_BASE + '/status-distribution')
+        .then(res => res.json())
+        .then(data => {
+          let html = '<table><thead><tr><th>状态</th><th>数量</th></tr></thead><tbody>';
+          data.forEach(d => {
+            html += `<tr><td><span class="status ${getStatusClass(d.status)}">${d.status}</span></td><td>${d.count}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('statusDistArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    // ===== 逾期清单 =====
+    function loadOverdueList() {
+      fetch(API_BASE + '/overdue')
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            document.getElementById('overdueListArea').innerHTML = '<p style="text-align:center;color:#888;padding:40px;">暂无逾期记录</p>';
+            return;
+          }
+          let html = '<div class="alert-box alert-danger">⚠️ 共有 <strong>' + data.length + '</strong> 台设备已逾期</div>';
+          html += '<table><thead><tr><th>记录编号</th><th>设备名称</th><th>资产编号</th><th>借用人</th><th>联系电话</th><th>应还日期</th><th>逾期天数</th><th>状态</th><th>告警</th></tr></thead><tbody>';
+          data.forEach(d => {
+            let warningBadge = d.overdueWarning ? '<span style="color:#dc2626;">⚠️ 已告警(' + d.overdueWarningTime + ')</span>' : '<span style="color:#888;">未告警</span>';
+            html += `<tr><td>${d.recordNo}</td><td>${d.equipmentName || '-'}</td><td>${d.equipmentAssetNo || '-'}</td><td>${d.borrowerName || '-'}</td><td>${d.borrowerPhone || '-'}</td><td>${d.expectedReturnDate}</td><td style="color:#dc2626;font-weight:600;">${d.overdueDays}天</td><td>${d.status}</td><td>${warningBadge}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('overdueListArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    // ===== 故障维修 =====
+    function loadRepairStats() {
+      fetch(API_BASE + '/repair-stats')
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            document.getElementById('repairArea').innerHTML = '<p style="text-align:center;color:#888;padding:40px;">暂无故障维修记录</p>';
+            return;
+          }
+          let html = '<table><thead><tr><th>资产编号</th><th>设备名称</th><th>状态</th><th>位置</th><th>维修频次</th><th>累计维修时长</th><th>故障描述</th><th>维修状态</th><th>报修日期</th><th>维修时长(天)</th><th>维修人员</th></tr></thead><tbody>';
+          data.forEach(d => {
+            html += `<tr><td>${d.assetNo}</td><td>${d.name}</td><td><span class="status status-repair">${d.status}</span></td><td>${d.location || '-'}</td><td style="color:#dc2626;font-weight:600;">${d.repairCount}次</td><td>${d.totalRepairDays}天</td><td>${d.latestFaultDescription || '-'}</td><td>${d.latestRepairStatus || '-'}</td><td>${d.latestReportDate || '-'}</td><td>${d.latestRepairDuration || '-'}</td><td>${d.latestRepairPerson || '-'}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('repairArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    // ===== 检定到期 =====
+    function loadCalibrationDue() {
+      fetch(API_BASE + '/calibration-due')
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            document.getElementById('calibrationArea').innerHTML = '<p style="text-align:center;color:#888;padding:40px;">暂无检定到期记录</p>';
+            return;
+          }
+          let overdueCount = data.filter(d => d.status === '已逾期').length;
+          let dueSoonCount = data.filter(d => d.status === '即将到期').length;
+          let html = '';
+          if (overdueCount > 0) {
+            html += '<div class="alert-box alert-danger">⚠️ 共有 <strong>' + overdueCount + '</strong> 台设备检定已逾期</div>';
+          }
+          if (dueSoonCount > 0) {
+            html += '<div class="alert-box alert-warning">⚠️ 共有 <strong>' + dueSoonCount + '</strong> 台设备检定即将到期（7天内）</div>';
+          }
+          html += '<table><thead><tr><th>资产编号</th><th>设备名称</th><th>类别</th><th>位置</th><th>上次检定日期</th><th>下次检定日期</th><th>检定周期(月)</th><th>责任人</th><th>剩余天数</th><th>状态</th></tr></thead><tbody>';
+          data.forEach(d => {
+            let statusColor = d.status === '已逾期' ? '#dc2626' : (d.status === '即将到期' ? '#f59e0b' : '#16a34a');
+            html += `<tr><td>${d.assetNo}</td><td>${d.name}</td><td>${d.category || '-'}</td><td>${d.location || '-'}</td><td>${d.lastCalibrationDate || '-'}</td><td>${d.nextCalibrationDate}</td><td>${d.calibrationPeriodMonths || '-'}</td><td>${d.responsiblePerson || '-'}</td><td style="color:${statusColor};font-weight:600;">${d.daysUntilDue}天</td><td style="color:${statusColor};font-weight:600;">${d.status}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          document.getElementById('calibrationArea').innerHTML = html;
+        })
+        .catch(err => console.error('加载失败:', err));
+    }
+
+    function checkCalibration() {
+      fetch(API_BASE + '/check-calibration', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          alert(data.message);
+          loadCalibrationDue();
+        })
+        .catch(err => alert('检定检查失败：' + err));
+    }
+
+    // ===== 导出Excel =====
+    function exportToExcel(type) {
+      let url = '';
+      switch(type) {
+        case 'inventory': url = API_BASE + '/query'; break;
+        case 'ledger': url = API_BASE + '/ledger'; break;
+        case 'calibration': url = API_BASE + '/calibration-due'; break;
+      }
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || data.length === 0) { alert('暂无数据可导出'); return; }
+          const headers = Object.keys(data[0]);
+          let csv = '\uFEFF' + headers.join(',') + '\n';
+          data.forEach(row => {
+            csv += headers.map(h => '"' + (row[h] || '') + '"').join(',') + '\n';
+          });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = type + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+          link.click();
+        })
+        .catch(err => alert('导出失败：' + err));
+    }
+
+    // Initial load
+    loadInventory();
+  </script>
+</body>
+</html>

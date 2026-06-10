@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>实验室使用登记</title>
+    <script src="api-fetch.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: #f7f8fa;
+            color: #333;
+        }
+        h1 {
+            margin: 0 0 20px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 0;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-size: 15px;
+            color: #555;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            color: #007bff;
+            background: #f5f5f5;
+        }
+        .tab.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+            font-weight: 600;
+        }
+        .btn {
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 9px 16px;
+            font-size: 14px;
+            color: #fff;
+            background: #1677ff;
+        }
+        .btn:hover {
+            background: #0958d9;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #565e64;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-disabled {
+            background: #bfbfbf;
+            cursor: not-allowed;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .summary {
+            margin-bottom: 16px;
+            color: #666;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+        th, td {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 12px 10px;
+            text-align: left;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #555;
+        }
+        tr:hover {
+            background: #fafcff;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-pending {
+            background: #fff7e6;
+            color: #d48806;
+        }
+        .status-registered {
+            background: #f6ffed;
+            color: #389e0d;
+        }
+        .status-overdue {
+            background: #fff1f0;
+            color: #cf1322;
+        }
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .empty {
+            text-align: center;
+            color: #888;
+            padding: 48px 16px;
+            font-size: 15px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 24px;
+        }
+        .modal-content {
+            width: 94%;
+            max-width: 920px;
+            max-height: 92vh;
+            overflow-y: auto;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+        .close {
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close:hover {
+            color: #333;
+        }
+        .section-title {
+            margin: 18px 0 12px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #222;
+        }
+        .tip-bar {
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            background: #e6f4ff;
+            border: 1px solid #b7dcff;
+            border-radius: 8px;
+            color: #174a84;
+            font-size: 14px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group.full-row {
+            grid-column: 1 / -1;
+        }
+        label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #fff;
+            color: #333;
+        }
+        textarea {
+            min-height: 88px;
+            resize: vertical;
+        }
+        .readonly-field {
+            background: #f0f2f5 !important;
+            color: #666 !important;
+            border-color: #d9d9d9 !important;
+            cursor: not-allowed;
+        }
+        .readonly-note {
+            margin-top: -2px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .detail-item {
+            background: #f8f9fb;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .detail-item strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 13px;
+        }
+        @media (max-width: 768px) {
+            .form-grid,
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            .modal {
+                padding: 10px;
+            }
+            .modal-content {
+                width: 100%;
+                padding: 16px;
+            }
+            th, td {
+                font-size: 13px;
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<h1>实验室使用登记</h1>
+
+<div class="top-bar">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('PENDING', this)">待登记</div>
+        <div class="tab" onclick="switchTab('REGISTERED', this)">已登记</div>
+        <div class="tab" onclick="switchTab('OVERDUE', this)">逾期未登记</div>
+    </div>
+    <button class="btn" onclick="loadRecords()">刷新列表</button>
+</div>
+
+<div class="card">
+    <div class="summary" id="summaryText">正在加载数据...</div>
+    <div id="tableWrapper"></div>
+</div>
+
+<div id="registerModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>填写使用登记</h2>
+            <span class="close" onclick="closeRegisterModal()">&times;</span>
+        </div>
+
+        <div class="tip-bar">
+            系统已自动带入大部分基础信息。灰色字段为系统自动生成，不需要手动修改。
+        </div>
+
+        <div class="section-title">自动带入信息</div>
+        <div class="readonly-note">以下字段均为系统自动填充，只读显示。</div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>所在部门</label>
+                <input id="department" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>填写时间</label>
+                <input id="fillTime" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>实验室名称</label>
+                <input id="labName" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>楼名</label>
+                <input id="buildingName" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>房间号</label>
+                <input id="roomNumber" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>使用日期</label>
+                <input id="usageDate" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>课程/项目名</label>
+                <input id="courseOrProjectName" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>计划学时</label>
+                <input id="plannedHours" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>班级</label>
+                <input id="className" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>应到人数</label>
+                <input id="expectedAttendance" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>填报人ID</label>
+                <input id="reporterId" class="readonly-field" type="text" readonly>
+            </div>
+            <div class="form-group">
+                <label>填报人姓名</label>
+                <input id="reporterName" class="readonly-field" type="text" readonly>
+            </div>
+        </div>
+
+        <div class="section-title">手动填写信息</div>
+        <div class="form-grid">
+            <div class="form-group full-row" style="flex-direction:row;align-items:center;gap:10px;">
+                <label style="cursor:pointer;display:flex;align-items:center;gap:6px;">
+                    <input type="checkbox" id="isTheory" onchange="toggleTheoryMode()" style="width:18px;height:18px;cursor:pointer;">
+                    是否理论授课（勾选后实验项目名称可自由填写，类型自动选"其他"）
+                </label>
+            </div>
+            <div class="form-group">
+                <label>实验项目名称</label>
+                <div id="expNameTextWrap">
+                    <input id="experimentItemName" type="text" placeholder="请输入实验项目名称">
+                </div>
+                <div id="expNameSelectWrap" style="display:none;">
+                    <select id="experimentItemNameSelect" onchange="onExpItemSelect()">
+                        <option value="">-- 请选择实验项目 --</option>
+                        <option value="电路基础实验" data-type="基础实验">电路基础实验</option>
+                        <option value="信号与系统综合实验" data-type="综合实验">信号与系统综合实验</option>
+                        <option value="嵌入式系统设计实验" data-type="设计实验">嵌入式系统设计实验</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>实验项目类型</label>
+                <select id="experimentItemType">
+                    <option value="基础实验">基础实验</option>
+                    <option value="综合实验">综合实验</option>
+                    <option value="设计实验">设计实验</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>实际使用时长（小时）</label>
+                <input id="actualHours" type="number" step="0.5" min="0" placeholder="请输入实际使用时长">
+            </div>
+            <div class="form-group">
+                <label>实到人数</label>
+                <input id="actualAttendance" type="number" min="0" placeholder="请输入实到人数">
+            </div>
+            <div class="form-group">
+                <label>教学情况</label>
+                <select id="teachingStatus">
+                    <option value="正常">正常</option>
+                    <option value="异常">异常</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>设备情况</label>
+                <select id="equipmentStatus">
+                    <option value="正常">正常</option>
+                    <option value="异常">异常</option>
+                </select>
+            </div>
+            <div class="form-group full-row">
+                <label>考勤记录</label>
+                <textarea id="attendanceRecord" placeholder="请输入考勤记录，未填写将默认保存为"无""></textarea>
+            </div>
+        </div>
+
+        <input id="recordId" type="hidden">
+        <input id="reservationId" type="hidden">
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeRegisterModal()">取消</button>
+            <button class="btn btn-success" id="submitBtn" onclick="submitRegister()">提交登记</button>
+        </div>
+    </div>
+</div>
+
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>登记详情</h2>
+            <span class="close" onclick="closeDetailModal()">&times;</span>
+        </div>
+        <div class="detail-grid" id="detailGrid"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDetailModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allRecords = [];
+    let currentStatus = 'PENDING';
+
+    function safeText(value, fallback = '-') {
+        if (value === null || value === undefined || value === '') return fallback;
+        return value;
+    }
+
+    function statusText(status) {
+        const map = {
+            PENDING: '待登记',
+            REGISTERED: '已登记',
+            OVERDUE: '逾期未登记'
+        };
+        return map[status] || safeText(status);
+    }
+
+    function statusClass(status) {
+        const map = {
+            PENDING: 'status-pending',
+            REGISTERED: 'status-registered',
+            OVERDUE: 'status-overdue'
+        };
+        return map[status] || '';
+    }
+
+    function switchTab(status, btn) {
+        currentStatus = status;
+        document.querySelectorAll('.tab').forEach(item => item.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderTable();
+    }
+
+    function filteredRecords() {
+        return allRecords.filter(item => (item.recordStatus || 'PENDING') === currentStatus);
+    }
+
+    function renderTable() {
+        const wrapper = document.getElementById('tableWrapper');
+        const summary = document.getElementById('summaryText');
+        const list = filteredRecords();
+
+        summary.textContent = `当前共有 ${list.length} 条${statusText(currentStatus)}记录`;
+
+        if (!Array.isArray(list) || list.length === 0) {
+            wrapper.innerHTML = '<div class="empty">当前状态下暂无记录</div>';
+            return;
+        }
+
+        wrapper.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>使用日期</th>
+                        <th>实验室名称</th>
+                        <th>楼名</th>
+                        <th>房间号</th>
+                        <th>课程/项目名</th>
+                        <th>班级</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${list.map(item => `
+                        <tr>
+                            <td>${safeText(item.id)}</td>
+                            <td>${safeText(item.usageDate)}</td>
+                            <td>${safeText(item.labName)}</td>
+                            <td>${safeText(item.buildingName)}</td>
+                            <td>${safeText(item.roomNumber)}</td>
+                            <td>${safeText(item.courseOrProjectName)}</td>
+                            <td>${safeText(item.className)}</td>
+                            <td><span class="status-badge ${statusClass(item.recordStatus)}">${statusText(item.recordStatus)}</span></td>
+                            <td>
+                                <div class="actions">
+                                    ${item.recordStatus === 'PENDING'
+                                        ? `<button class="btn btn-success" onclick="openRegisterModal(${item.reservationId})">登记</button>`
+                                        : `<button class="btn btn-disabled" disabled>已完成</button>`
+                                    }
+                                    <button class="btn" onclick="viewDetail(${item.id})">详情</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    async function loadRecords() {
+        const wrapper = document.getElementById('tableWrapper');
+        const summary = document.getElementById('summaryText');
+        wrapper.innerHTML = '<div class="empty">正在加载...</div>';
+        summary.textContent = '正在获取我的登记记录...';
+
+        try {
+            const list = await apiFetch('/api/schedule-usage-records/mine');
+            allRecords = Array.isArray(list) ? list : [];
+            renderTable();
+        } catch (error) {
+            wrapper.innerHTML = '<div class="empty">加载失败，请稍后重试</div>';
+            summary.textContent = '数据加载失败';
+            alert('加载我的登记记录失败：' + (error.message || error));
+        }
+    }
+
+    function setFormValue(id, value, fallback = '') {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = value === null || value === undefined ? fallback : value;
+    }
+
+    async function openRegisterModal(reservationId) {
+        try {
+            const item = await apiFetch(`/api/schedule-usage-records/init?reservationId=${reservationId}`);
+
+            setFormValue('recordId', item.id, '');
+            setFormValue('reservationId', item.reservationId, '');
+            setFormValue('department', safeText(item.department, '暂无数据'));
+            setFormValue('fillTime', safeText(item.fillTime, '暂无数据'));
+            setFormValue('labName', safeText(item.labName, '暂无数据'));
+            setFormValue('buildingName', safeText(item.buildingName, '暂无数据'));
+            setFormValue('roomNumber', safeText(item.roomNumber, '暂无数据'));
+            setFormValue('usageDate', safeText(item.usageDate, '暂无数据'));
+            setFormValue('courseOrProjectName', safeText(item.courseOrProjectName, '测试课程'));
+            setFormValue('plannedHours', safeText(item.plannedHours, '0'));
+            setFormValue('className', safeText(item.className, '暂无数据'));
+            setFormValue('expectedAttendance', safeText(item.expectedAttendance, '0'));
+            setFormValue('reporterId', safeText(item.reporterId, ''));
+            setFormValue('reporterName', safeText(item.reporterName, '测试用户'));
+
+            setFormValue('experimentItemName', safeText(item.experimentItemName, '暂无数据'));
+            setFormValue('experimentItemType', safeText(item.experimentItemType, '基础实验'));
+            setFormValue('actualHours', item.actualHours ?? '');
+            setFormValue('actualAttendance', item.actualAttendance ?? '');
+            setFormValue('attendanceRecord', item.attendanceRecord === '无' ? '' : safeText(item.attendanceRecord, ''));
+            setFormValue('teachingStatus', safeText(item.teachingStatus, '正常'));
+            setFormValue('equipmentStatus', safeText(item.equipmentStatus, '正常'));
+
+            // 重置理论授课模式：默认实验模式
+            document.getElementById('isTheory').checked = false;
+            toggleTheoryMode();
+
+            document.getElementById('registerModal').style.display = 'block';
+        } catch (error) {
+            alert('初始化登记表单失败：' + (error.message || error));
+        }
+    }
+
+    function closeRegisterModal() {
+        document.getElementById('registerModal').style.display = 'none';
+    }
+
+    async function submitRegister() {
+        const id = document.getElementById('recordId').value;
+        if (!id) {
+            alert('记录ID缺失，无法提交');
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '提交中...';
+
+        const payload = {
+            experimentItemName: getExperimentItemNameValue() || '暂无数据',
+            experimentItemType: document.getElementById('experimentItemType').value || '基础实验',
+            actualHours: document.getElementById('actualHours').value ? parseFloat(document.getElementById('actualHours').value) : 0,
+            actualAttendance: document.getElementById('actualAttendance').value ? parseInt(document.getElementById('actualAttendance').value, 10) : 0,
+            attendanceRecord: document.getElementById('attendanceRecord').value.trim() || '无',
+            teachingStatus: document.getElementById('teachingStatus').value || '正常',
+            equipmentStatus: document.getElementById('equipmentStatus').value || '正常'
+        };
+
+        try {
+            await apiFetch(`/api/schedule-usage-records/${id}/submit`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            alert('提交登记成功');
+            closeRegisterModal();
+            await loadRecords();
+        } catch (error) {
+            alert('提交登记失败：' + (error.message || error));
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交登记';
+        }
+    }
+
+    async function viewDetail(id) {
+        try {
+            const item = await apiFetch(`/api/schedule-usage-records/${id}`);
+            const rows = [
+                ['所在部门', safeText(item.department, '暂无数据')],
+                ['填写时间', safeText(item.fillTime, '暂无数据')],
+                ['实验室名称', safeText(item.labName, '暂无数据')],
+                ['楼名', safeText(item.buildingName, '暂无数据')],
+                ['房间号', safeText(item.roomNumber, '暂无数据')],
+                ['使用日期', safeText(item.usageDate, '暂无数据')],
+                ['课程/项目名', safeText(item.courseOrProjectName, '测试课程')],
+                ['计划学时', safeText(item.plannedHours, '0')],
+                ['班级', safeText(item.className, '暂无数据')],
+                ['应到人数', safeText(item.expectedAttendance, '0')],
+                ['填报人ID', safeText(item.reporterId, '')],
+                ['填报人姓名', safeText(item.reporterName, '测试用户')],
+                ['实验项目名称', safeText(item.experimentItemName, '暂无数据')],
+                ['实验项目类型', safeText(item.experimentItemType, '暂无数据')],
+                ['实际使用时长', safeText(item.actualHours, '0')],
+                ['实到人数', safeText(item.actualAttendance, '0')],
+                ['考勤记录', safeText(item.attendanceRecord, '无')],
+                ['教学情况', safeText(item.teachingStatus, '正常')],
+                ['设备情况', safeText(item.equipmentStatus, '正常')],
+                ['状态', statusText(item.recordStatus)]
+            ];
+
+            document.getElementById('detailGrid').innerHTML = rows.map(([label, value]) => `
+                <div class="detail-item">
+                    <strong>${label}</strong>
+                    <span>${value}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('detailModal').style.display = 'block';
+        } catch (error) {
+            alert('加载详情失败：' + (error.message || error));
+        }
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        const registerModal = document.getElementById('registerModal');
+        const detailModal = document.getElementById('detailModal');
+        if (event.target === registerModal) closeRegisterModal();
+        if (event.target === detailModal) closeDetailModal();
+    };
+
+    function toggleTheoryMode() {
+        const isTheory = document.getElementById('isTheory').checked;
+        const textWrap = document.getElementById('expNameTextWrap');
+        const selectWrap = document.getElementById('expNameSelectWrap');
+        const typeSelect = document.getElementById('experimentItemType');
+        const courseName = document.getElementById('courseOrProjectName').value || '';
+
+        if (isTheory) {
+            // 理论授课：文本框，默认填课程名，类型锁定"其他"
+            textWrap.style.display = '';
+            selectWrap.style.display = 'none';
+            document.getElementById('experimentItemName').value = courseName || '理论授课';
+            typeSelect.value = '其他';
+            typeSelect.disabled = true;
+            typeSelect.style.background = '#f0f2f5';
+        } else {
+            // 实验授课：下拉框，类型可选
+            textWrap.style.display = 'none';
+            selectWrap.style.display = '';
+            document.getElementById('experimentItemNameSelect').value = '';
+            typeSelect.value = '基础实验';
+            typeSelect.disabled = false;
+            typeSelect.style.background = '';
+        }
+    }
+
+    function onExpItemSelect() {
+        const select = document.getElementById('experimentItemNameSelect');
+        const option = select.options[select.selectedIndex];
+        const type = option ? (option.getAttribute('data-type') || '') : '';
+        if (type) {
+            document.getElementById('experimentItemType').value = type;
+        }
+    }
+
+    function getExperimentItemNameValue() {
+        const isTheory = document.getElementById('isTheory').checked;
+        if (isTheory) {
+            return document.getElementById('experimentItemName').value.trim();
+        }
+        return document.getElementById('experimentItemNameSelect').value;
+    }
+
+    loadRecords();
+</script>
+</body>
+</html>

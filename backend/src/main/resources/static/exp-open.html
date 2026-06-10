@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验项目开出管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background: #fff;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>实验项目开出管理</h1>
+    <div style="margin-bottom: 20px;">
+        <button class="btn" onclick="openAddModal()">新增开出</button>
+        <button class="btn" onclick="exportExpOpen()">导出 Word</button>
+    </div>
+    <table id="openTable">
+        <thead>
+            <tr>
+                <th>任务编号</th>
+                <th>项目编号</th>
+                <th>上课周次</th>
+                <th>上课星期</th>
+                <th>上课节次</th>
+                <th>实验组数</th>
+                <th>每组人数</th>
+                <th>是否开出</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- 详情模态框 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>实验项目开出详情</h2>
+                <span class="close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div id="detailContent" style="padding: 20px;"></div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/编辑模态框 -->
+    <div id="openModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增开出</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实验教学任务编号</label>
+                    <input type="number" id="modalTaskId" placeholder="请输入任务编号">
+                </div>
+                <div class="form-group">
+                    <label>实验项目编号</label>
+                    <input type="number" id="modalItemId" placeholder="请输入项目编号">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>上课周次</label>
+                    <input type="number" id="modalWeek" placeholder="如：1-16">
+                </div>
+                <div class="form-group">
+                    <label>上课星期</label>
+                    <select id="modalDayOfWeek">
+                        <option value="">请选择</option>
+                        <option value="1">星期一</option>
+                        <option value="2">星期二</option>
+                        <option value="3">星期三</option>
+                        <option value="4">星期四</option>
+                        <option value="5">星期五</option>
+                        <option value="6">星期六</option>
+                        <option value="7">星期日</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>上课节次</label>
+                    <input type="number" id="modalClassSection" placeholder="如：1-2 节">
+                </div>
+                <div class="form-group">
+                    <label>实验组数</label>
+                    <input type="number" id="modalGroupCount" placeholder="请输入组数">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>每组人数</label>
+                    <input type="number" id="modalStudentsPerGroup" placeholder="请输入每组人数">
+                </div>
+                <div class="form-group">
+                    <label>循环次数</label>
+                    <input type="number" id="modalCycleCount" placeholder="请输入循环次数">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实验要求</label>
+                    <select id="modalRequirement"></select>
+                </div>
+                <div class="form-group">
+                    <label>是否开出</label>
+                    <select id="modalIsOpend"></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>楼房名称</label>
+                    <input type="text" id="modalBuildingName" placeholder="如：实验楼 A">
+                </div>
+                <div class="form-group">
+                    <label>房间号</label>
+                    <input type="text" id="modalRoomNumber" placeholder="如：301">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>未能开出原因</label>
+                <input type="text" id="modalNotOpendReason" placeholder="如未开出，请填写原因">
+            </div>
+
+            <input type="hidden" id="modalOpenId">
+
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="saveOpen()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+<script>
+        console.log('exp-open.html loaded');
+
+        // 页面加载时获取数据
+        window.onload = function () {
+            loadAllDictionaries().then(() => {
+                renderDictSelectOptions('modalRequirement', 'experiment_requirement', [{ value: '', text: '请选择' }]);
+                renderDictSelectOptions('modalIsOpend', 'yes_no', [{ value: '', text: '请选择' }]);
+            });
+            console.log('Page loaded, fetching data...');
+            fetch('/api/exp-open')
+                .then(res => res.json())
+                .then(data => {
+                    console.log('Data received:', data);
+                    const tbody = document.querySelector('#openTable tbody');
+                    tbody.innerHTML = '';
+                    if (Array.isArray(data)) {
+                        data.forEach(open => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${open.taskId || '-'}</td>
+                                <td>${open.itemId || '-'}</td>
+                                <td>${open.week || '-'}</td>
+                                <td>${getDayOfWeekText(open.dayOfWeek)}</td>
+                                <td>${open.classSection || '-'}</td>
+                                <td>${open.groupCount || '-'}</td>
+                                <td>${open.studentsPerGroup || '-'}</td>
+                                <td>${open.isOpend != null ? (open.isOpend ? '是' : '否') : '-'}</td>
+                                <td>
+                                    <button class="btn" onclick="viewDetail(${open.id})">详情</button>
+                                    <button class="btn" onclick="editOpen(${open.id})">编辑</button>
+                                    <button class="btn btn-danger" onclick="deleteOpen(${open.id})">删除</button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching data:', err);
+                    alert('加载数据失败：' + err.message);
+                });
+        };
+
+        function getDayOfWeekText(day) {
+            const days = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+            return day && day >= 1 && day <= 7 ? days[day] : '-';
+        }
+
+        // 打开模态框
+        function openModal(isEdit = false) {
+            document.getElementById('openModal').style.display = 'block';
+            document.getElementById('modalTitle').textContent = isEdit ? '编辑开出' : '新增开出';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('openModal').style.display = 'none';
+            clearModal();
+        }
+
+        // 清空模态框
+        function clearModal() {
+            document.getElementById('modalOpenId').value = '';
+            document.getElementById('modalTaskId').value = '';
+            document.getElementById('modalItemId').value = '';
+            document.getElementById('modalWeek').value = '';
+            document.getElementById('modalDayOfWeek').value = '';
+            document.getElementById('modalClassSection').value = '';
+            document.getElementById('modalGroupCount').value = '';
+            document.getElementById('modalStudentsPerGroup').value = '';
+            document.getElementById('modalCycleCount').value = '';
+            document.getElementById('modalRequirement').value = '';
+            document.getElementById('modalIsOpend').value = '';
+            document.getElementById('modalBuildingName').value = '';
+            document.getElementById('modalRoomNumber').value = '';
+            document.getElementById('modalNotOpendReason').value = '';
+        }
+
+        // 新增开出
+        function openAddModal() {
+            openModal(false);
+        }
+
+        // 编辑开出
+        function editOpen(id) {
+            fetch(`/api/exp-open/${id}`)
+                .then(res => res.json())
+                .then(open => {
+                    openModal(true);
+                    clearModal();
+                    document.getElementById('modalOpenId').value = open.id;
+                    document.getElementById('modalTaskId').value = open.taskId || '';
+                    document.getElementById('modalItemId').value = open.itemId || '';
+                    document.getElementById('modalWeek').value = open.week || '';
+                    document.getElementById('modalDayOfWeek').value = open.dayOfWeek || '';
+                    document.getElementById('modalClassSection').value = open.classSection || '';
+                    document.getElementById('modalGroupCount').value = open.groupCount || '';
+                    document.getElementById('modalStudentsPerGroup').value = open.studentsPerGroup || '';
+                    document.getElementById('modalCycleCount').value = open.cycleCount || '';
+                    document.getElementById('modalRequirement').value = open.requirement || '';
+                    document.getElementById('modalIsOpend').value = open.isOpend != null ? open.isOpend.toString() : '';
+                    document.getElementById('modalBuildingName').value = open.buildingName || '';
+                    document.getElementById('modalRoomNumber').value = open.roomNumber || '';
+                    document.getElementById('modalNotOpendReason').value = open.notOpendReason || '';
+
+                    // 滚动到顶部
+                    document.querySelector('.modal-content').scrollTop = 0;
+                })
+                .catch(err => {
+                    alert('获取信息失败：' + err.message);
+                });
+        }
+
+        // 查看详情
+        function viewDetail(id) {
+            fetch(`/api/exp-open/${id}`)
+                .then(res => res.json())
+                .then(open => {
+                    const detailContent = document.getElementById('detailContent');
+                    detailContent.innerHTML = `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>实验教学任务编号</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.taskId || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实验项目编号</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.itemId || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>上课周次</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.week || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>上课星期</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${getDayOfWeekText(open.dayOfWeek)}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>上课节次</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.classSection || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实验组数</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.groupCount || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>每组人数</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.studentsPerGroup || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>循环次数</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.cycleCount || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实验要求</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.requirement || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>是否开出</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.isOpend != null ? (open.isOpend ? '是' : '否') : '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>楼房名称</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.buildingName || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>房间号</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.roomNumber || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>未能开出原因</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${open.notOpendReason || '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').style.display = 'block';
+                })
+                .catch(err => {
+                    alert('获取详情失败：' + err.message);
+                });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 保存开出（新增或编辑）
+        function saveOpen() {
+            const id = document.getElementById('modalOpenId').value;
+            const openData = {
+                taskId: document.getElementById('modalTaskId').value ? parseInt(document.getElementById('modalTaskId').value) : null,
+                itemId: document.getElementById('modalItemId').value ? parseInt(document.getElementById('modalItemId').value) : null,
+                week: document.getElementById('modalWeek').value ? parseInt(document.getElementById('modalWeek').value) : null,
+                dayOfWeek: document.getElementById('modalDayOfWeek').value ? parseInt(document.getElementById('modalDayOfWeek').value) : null,
+                classSection: document.getElementById('modalClassSection').value ? parseInt(document.getElementById('modalClassSection').value) : null,
+                groupCount: document.getElementById('modalGroupCount').value ? parseInt(document.getElementById('modalGroupCount').value) : null,
+                studentsPerGroup: document.getElementById('modalStudentsPerGroup').value ? parseInt(document.getElementById('modalStudentsPerGroup').value) : null,
+                cycleCount: document.getElementById('modalCycleCount').value ? parseInt(document.getElementById('modalCycleCount').value) : null,
+                requirement: document.getElementById('modalRequirement').value,
+                isOpend: document.getElementById('modalIsOpend').value ? document.getElementById('modalIsOpend').value === 'true' : null,
+                buildingName: document.getElementById('modalBuildingName').value,
+                roomNumber: document.getElementById('modalRoomNumber').value,
+                notOpendReason: document.getElementById('modalNotOpendReason').value
+            };
+
+            if (!openData.itemId) {
+                alert('请填写项目编号！');
+                return;
+            }
+
+            const url = id ? `/api/exp-open/${id}` : '/api/exp-open';
+            const method = id ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(openData)
+            }).then(() => {
+                alert(id ? '更新成功！' : '新增成功！');
+                window.location.reload();
+            }).catch(err => {
+                alert(id ? '更新失败：' + err.message : '新增失败：' + err.message);
+            });
+        }
+
+        // 删除开出
+        function deleteOpen(id) {
+            if (confirm('确定要删除吗？')) {
+                fetch(`/api/exp-open/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        alert('删除成功！');
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        alert('删除失败：' + err.message);
+                    });
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function (event) {
+            const openModal = document.getElementById('openModal');
+            const detailModal = document.getElementById('detailModal');
+            if (event.target === openModal) {
+                closeModal();
+            }
+            if (event.target === detailModal) {
+                closeDetailModal();
+            }
+        }
+
+        function exportExpOpen() {
+            window.location.href = "/export/exp-open";
+        }
+    </script>
+</body>
+
+</html>

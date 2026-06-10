@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实训教学计划管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background: #fff;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .required::after {
+            content: " *";
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>实训教学计划管理</h1>
+    <div style="margin-bottom: 20px;">
+        <button class="btn" onclick="openAddModal()">新增计划</button>
+        <button class="btn" onclick="exportTrainingPlan()">导出 Word</button>
+    </div>
+    <table id="planTable">
+        <thead>
+            <tr>
+                <th>课程编号</th>
+                <th>组织方式</th>
+                <th>实训地点</th>
+                <th>考核方式</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- 详情模态框 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>实训教学计划详情</h2>
+                <span class="close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div id="detailContent" style="padding: 20px;"></div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/编辑模态框 -->
+    <div id="planModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增计划</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="required">课程编号</label>
+                    <input type="number" id="modalCourseId" placeholder="请输入课程编号">
+                </div>
+                <div class="form-group">
+                    <label class="required">实训教学组织方式</label>
+                    <select id="modalOrganizationMode"></select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="required">实训教学地点</label>
+                <input type="text" id="modalTrainingPlace" placeholder="请输入实训教学地点">
+            </div>
+
+            <div class="form-group">
+                <label class="required">实训教学目的和要求</label>
+                <textarea id="modalTrainingObjective" placeholder="请输入实训教学目的和要求" style="min-height: 100px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="required">教学内容及（计划）安排</label>
+                <textarea id="modalTrainingContent" placeholder="请输入教学内容及计划安排" style="min-height: 100px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="required">实训方式（含循环分组情况）</label>
+                <textarea id="modalTrainingMethod" placeholder="请输入实训方式，含循环分组情况" style="min-height: 80px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="required">课程考核方式</label>
+                <select id="modalAssessmentMethod"></select>
+            </div>
+
+            <div class="form-group">
+                <label class="required">实训教学质量保障措施</label>
+                <textarea id="modalQualityMeasures" placeholder="请输入实训教学质量保障措施" style="min-height: 80px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>实验中心意见（校内使用需审批）</label>
+                <textarea id="modalExpCenterOpinion" placeholder="请输入实验中心意见" style="min-height: 60px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>院系意见</label>
+                <textarea id="modalDeptOpinion" placeholder="请输入院系意见" style="min-height: 60px;"></textarea>
+            </div>
+
+            <input type="hidden" id="modalPlanId">
+
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="savePlan()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+<script>
+        console.log('training-plan.html loaded');
+
+        // 页面加载时获取数据
+        window.onload = function () {
+            loadAllDictionaries().then(() => {
+                renderDictSelectOptions('modalOrganizationMode', 'training_org_mode', [{ value: '', text: '请选择' }]);
+                renderDictSelectOptions('modalAssessmentMethod', 'assessment_method', [{ value: '', text: '请选择' }]);
+            });
+            console.log('Page loaded, fetching data...');
+            fetch('/api/training-plan')
+                .then(res => res.json())
+                .then(data => {
+                    console.log('Data received:', data);
+                    const tbody = document.querySelector('#planTable tbody');
+                    tbody.innerHTML = '';
+                    if (Array.isArray(data)) {
+                        data.forEach(plan => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${plan.courseId || '-'}</td>
+                                <td>${plan.organizationMode || '-'}</td>
+                                <td>${plan.trainingPlace || '-'}</td>
+                                <td>${plan.assessmentMethod || '-'}</td>
+                                <td>
+                                    <button class="btn" onclick="viewDetail(${plan.id})">详情</button>
+                                    <button class="btn" onclick="editPlan(${plan.id})">编辑</button>
+                                    <button class="btn btn-danger" onclick="deletePlan(${plan.id})">删除</button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching data:', err);
+                    alert('加载数据失败：' + err.message);
+                });
+        };
+
+        // 打开模态框
+        function openModal(isEdit = false) {
+            document.getElementById('planModal').style.display = 'block';
+            document.getElementById('modalTitle').textContent = isEdit ? '编辑计划' : '新增计划';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('planModal').style.display = 'none';
+            clearModal();
+        }
+
+        // 清空模态框
+        function clearModal() {
+            document.getElementById('modalPlanId').value = '';
+            document.getElementById('modalCourseId').value = '';
+            document.getElementById('modalOrganizationMode').value = '';
+            document.getElementById('modalTrainingPlace').value = '';
+            document.getElementById('modalTrainingObjective').value = '';
+            document.getElementById('modalTrainingContent').value = '';
+            document.getElementById('modalTrainingMethod').value = '';
+            document.getElementById('modalAssessmentMethod').value = '';
+            document.getElementById('modalQualityMeasures').value = '';
+            document.getElementById('modalExpCenterOpinion').value = '';
+            document.getElementById('modalDeptOpinion').value = '';
+        }
+
+        // 新增计划
+        function openAddModal() {
+            openModal(false);
+        }
+
+        // 编辑计划
+        function editPlan(id) {
+            fetch(`/api/training-plan/${id}`)
+                .then(res => res.json())
+                .then(plan => {
+                    openModal(true);
+                    clearModal();
+                    document.getElementById('modalPlanId').value = plan.id;
+                    document.getElementById('modalCourseId').value = plan.courseId || '';
+                    document.getElementById('modalOrganizationMode').value = plan.organizationMode || '';
+                    document.getElementById('modalTrainingPlace').value = plan.trainingPlace || '';
+                    document.getElementById('modalTrainingObjective').value = plan.trainingObjective || '';
+                    document.getElementById('modalTrainingContent').value = plan.trainingContent || '';
+                    document.getElementById('modalTrainingMethod').value = plan.trainingMethod || '';
+                    document.getElementById('modalAssessmentMethod').value = plan.assessmentMethod || '';
+                    document.getElementById('modalQualityMeasures').value = plan.qualityMeasures || '';
+                    document.getElementById('modalExpCenterOpinion').value = plan.expCenterOpinion || '';
+                    document.getElementById('modalDeptOpinion').value = plan.deptOpinion || '';
+
+                    // 滚动到顶部
+                    document.querySelector('.modal-content').scrollTop = 0;
+                })
+                .catch(err => {
+                    alert('获取信息失败：' + err.message);
+                });
+        }
+
+        // 查看详情
+        function viewDetail(id) {
+            fetch(`/api/training-plan/${id}`)
+                .then(res => res.json())
+                .then(plan => {
+                    const detailContent = document.getElementById('detailContent');
+                    detailContent.innerHTML = `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>课程编号</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${plan.courseId || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>实训教学组织方式</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${plan.organizationMode || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>实训教学地点</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${plan.trainingPlace || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>实训教学目的和要求</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap;">${plan.trainingObjective || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>教学内容及（计划）安排</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap;">${plan.trainingContent || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>实训方式（含循环分组情况）</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap;">${plan.trainingMethod || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>课程考核方式</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px;">${plan.assessmentMethod || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>实训教学质量保障措施</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap;">${plan.qualityMeasures || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>实验中心意见（校内使用需审批）</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap;">${plan.expCenterOpinion || '-'}</div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>院系意见</label>
+                                <div style="margin-top: 5px; padding: 8px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap;">${plan.deptOpinion || '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').style.display = 'block';
+                })
+                .catch(err => {
+                    alert('获取详情失败：' + err.message);
+                });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 保存计划（新增或编辑）
+        function savePlan() {
+            const id = document.getElementById('modalPlanId').value;
+            const planData = {
+                courseId: document.getElementById('modalCourseId').value ? parseInt(document.getElementById('modalCourseId').value) : null,
+                organizationMode: document.getElementById('modalOrganizationMode').value,
+                trainingPlace: document.getElementById('modalTrainingPlace').value,
+                trainingObjective: document.getElementById('modalTrainingObjective').value,
+                trainingContent: document.getElementById('modalTrainingContent').value,
+                trainingMethod: document.getElementById('modalTrainingMethod').value,
+                assessmentMethod: document.getElementById('modalAssessmentMethod').value,
+                qualityMeasures: document.getElementById('modalQualityMeasures').value,
+                expCenterOpinion: document.getElementById('modalExpCenterOpinion').value,
+                deptOpinion: document.getElementById('modalDeptOpinion').value
+            };
+
+            if (!planData.courseId || !planData.organizationMode || !planData.trainingPlace || !planData.trainingObjective) {
+                alert('请填写所有必填字段！');
+                return;
+            }
+
+            const url = id ? `/api/training-plan/${id}` : '/api/training-plan';
+            const method = id ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(planData)
+            }).then(() => {
+                alert(id ? '更新成功！' : '新增成功！');
+                window.location.reload();
+            }).catch(err => {
+                alert(id ? '更新失败：' + err.message : '新增失败：' + err.message);
+            });
+        }
+
+        // 删除计划
+        function deletePlan(id) {
+            if (confirm('确定要删除吗？')) {
+                fetch(`/api/training-plan/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        alert('删除成功！');
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        alert('删除失败：' + err.message);
+                    });
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function (event) {
+            const planModal = document.getElementById('planModal');
+            const detailModal = document.getElementById('detailModal');
+            if (event.target === planModal) {
+                closeModal();
+            }
+            if (event.target === detailModal) {
+                closeDetailModal();
+            }
+        }
+
+        function exportTrainingPlan() {
+            window.location.href = "/export/training-plan";
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>实验室设备管理</title>
+  <style>
+    :root {
+      --bg: #eff2f5;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-strong: rgba(255, 255, 255, 0.92);
+      --ink: #181816;
+      --text: #26241f;
+      --muted: #6f6a62;
+      --line: rgba(37, 32, 27, 0.08);
+      --line-strong: rgba(37, 32, 27, 0.14);
+      --shadow: 0 12px 34px rgba(23, 22, 19, 0.06);
+      --radius: 20px;
+      --radius-sm: 14px;
+      --primary: #2563eb;
+      --primary-light: rgba(37, 99, 235, 0.1);
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 30%), linear-gradient(180deg, #f8f6f2 0%, #f1eee8 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .card {
+      background: var(--panel-strong);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .section-title h3 { margin: 0; font-size: 18px; }
+    .tag {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-warning { background: var(--warning); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-light { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
+    .btn-sm { padding: 4px 12px; font-size: 12px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .form-grid label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      background: var(--panel);
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    tr:hover { background: rgba(37, 99, 235, 0.03); }
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .status-available { background: var(--success); }
+    .status-borrowed { background: var(--warning); }
+    .status-repair { background: var(--danger); }
+    .status-scrapped { background: #6b7280; }
+    .status-lost { background: #000; }
+    .status-pending { background: var(--warning); }
+    .status-approved { background: var(--success); }
+    .status-returned { background: #6b7280; }
+    .status-rejected { background: var(--danger); }
+    .status-cancelled { background: #9ca3af; }
+    .status-reserved { background: #8b5cf6; }
+    .status-repairing { background: #f97316; }
+    .status-pending-repair { background: #ef4444; }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal h3 { margin: 0 0 16px 0; }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid var(--line);
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .important-badge {
+      background: #fef2f2;
+      color: var(--danger);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+    <div class="card">
+      <div class="section-title">
+        <h3>实验室设备管理</h3>
+        <div>
+          <span class="tag">设备管理员</span>
+          <a href="javascript:void(0)" onclick="window.top.location.href='/index.html'" class="btn btn-light btn-sm" style="margin-left: 8px; text-decoration: none;">返回主页</a>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" data-tab="equipment">设备管理</div>
+        <div class="tab" data-tab="borrow">借还管理</div>
+        <div class="tab" data-tab="category">分类管理</div>
+        <div class="tab" data-tab="location">位置管理</div>
+        <div class="tab" data-tab="statistics">统计报表</div>
+      </div>
+
+      <!-- 设备管理 -->
+      <div class="tab-content active" id="tab-equipment">
+        <div class="toolbar">
+          <input type="text" id="eqSearchAssetNo" placeholder="搜索资产编号..." style="width: 180px;" />
+          <input type="text" id="eqSearchName" placeholder="搜索设备名称..." style="width: 200px;" />
+          <select id="eqSearchStatus" style="width: 140px;">
+            <option value="">全部状态</option>
+            <option value="在库-可用">在库-可用</option>
+            <option value="在库-待维修">在库-待维修</option>
+            <option value="在库-已预约">在库-已预约</option>
+            <option value="借出">借出</option>
+            <option value="送修">送修</option>
+            <option value="报废">报废</option>
+            <option value="丢失">丢失</option>
+          </select>
+          <select id="eqSearchCategory" style="width: 160px;">
+            <option value="">全部分类</option>
+          </select>
+          <select id="eqSearchLocation" style="width: 160px;">
+            <option value="">全部位置</option>
+          </select>
+          <button class="btn btn-primary" onclick="loadEquipment()">查询</button>
+          <button class="btn btn-success" onclick="showEquipmentModal()">新增设备</button>
+          <button class="btn btn-light" onclick="showImportModal()">批量导入</button>
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>资产编号</th>
+                <th>设备名称</th>
+                <th>型号</th>
+                <th>分类</th>
+                <th>存放位置</th>
+                <th>状态</th>
+                <th>责任人</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="equipmentTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 借还管理 -->
+      <div class="tab-content" id="tab-borrow">
+        <div class="toolbar">
+          <select id="borrowSearchStatus" style="width: 140px;">
+            <option value="">全部状态</option>
+            <option value="待导师审批">待导师审批</option>
+            <option value="待审批">待审批</option>
+            <option value="已批准">已批准</option>
+            <option value="已借出">已借出</option>
+            <option value="已归还">已归还</option>
+            <option value="已拒绝">已拒绝</option>
+            <option value="已取消">已取消</option>
+          </select>
+          <button class="btn btn-primary" onclick="loadBorrowRecords()">查询</button>
+          <button class="btn btn-success" onclick="showBorrowModal()">申请借用</button>
+          <button class="btn btn-warning" onclick="loadOverdueRecords()">逾期告警</button>
+        </div>
+        <!-- 逾期告警区域 -->
+        <div id="overdueAlertArea" style="display:none;margin-bottom:12px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;">
+          <h4 style="color:#dc2626;margin:0 0 8px;">⚠ 逾期设备告警</h4>
+          <div id="overdueList"></div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>借还单号</th>
+                <th>设备名称</th>
+                <th>资产编号</th>
+                <th>借用人</th>
+                <th>电话</th>
+                <th>用途</th>
+                <th>使用地点</th>
+                <th>预计归还</th>
+                <th>实际归还</th>
+                <th>验收结果</th>
+                <th>状态</th>
+                <th>续借</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="borrowTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 分类管理 -->
+      <div class="tab-content" id="tab-category">
+        <div class="toolbar">
+          <button class="btn btn-success" onclick="showCategoryModal()">新增分类</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>编码</th>
+              <th>名称</th>
+              <th>父分类</th>
+              <th>排序</th>
+              <th>状态</th>
+              <th>描述</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="categoryTable"></tbody>
+        </table>
+      </div>
+
+      <!-- 位置管理 -->
+      <div class="tab-content" id="tab-location">
+        <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:var(--muted);">
+          <strong>用途说明：</strong>此处管理设备存放位置（如设备仓库、仪器室、维修间等），用于记录设备存放在哪里。<br/>
+          <strong>命名规范：</strong>请使用"设备仓库"、"仪器室"、"维修间"等名称，不要使用教室编号（如101、203），以免与场馆管理的教学教室混淆。<br/>
+          <strong>所属楼栋：</strong>仅表示设备存放在哪栋楼，方便定位查找。
+        </div>
+        <div class="toolbar">
+          <button class="btn btn-success" onclick="showLocationModal()">新增位置</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>编码</th>
+              <th>名称</th>
+              <th>所属楼栋</th>
+              <th>房间号</th>
+              <th>楼层</th>
+              <th>状态</th>
+              <th>描述</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="locationTable"></tbody>
+        </table>
+      </div>
+
+      <!-- 统计报表 -->
+      <div class="tab-content" id="tab-statistics">
+        <button class="btn btn-primary" onclick="loadStatistics()" style="margin-bottom: 16px;">刷新统计</button>
+        <div class="stats-grid" id="statsGrid"></div>
+        
+        <!-- 检定提醒 -->
+        <div class="card" style="margin-top: 16px;">
+          <h4>🔔 检定提醒</h4>
+          <p style="color: #666; font-size: 13px; margin-bottom: 12px;">
+            以下设备的检定日期将在30天内到期或已过期，请及时安排检定。系统每天凌晨6点自动检查并记录日志。
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>资产编号</th>
+                <th>设备名称</th>
+                <th>检定周期(月)</th>
+                <th>上次检定日期</th>
+                <th>下次检定日期</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="calibrationReminderTable"></tbody>
+          </table>
+        </div>
+        
+        <div class="card" style="margin-top: 16px;">
+          <h4>分类统计</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>分类名称</th>
+                <th>设备数量</th>
+              </tr>
+            </thead>
+            <tbody id="statsCategoryTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设备新增/编辑弹窗 -->
+  <div class="modal-overlay" id="equipmentModal">
+    <div class="modal">
+      <h3 id="equipmentModalTitle">新增设备</h3>
+      <form id="equipmentForm">
+        <input type="hidden" id="eqId" />
+        <div class="form-grid">
+          <div><label>资产编号 *</label><input id="eqAssetNo" required /></div>
+          <div><label>设备名称 *</label><input id="eqName" required /></div>
+          <div><label>型号</label><input id="eqModel" /></div>
+          <div><label>分类</label><select id="eqCategoryId"></select></div>
+          <div><label>单位</label><input id="eqUnit" placeholder="台/个/套" /></div>
+          <div><label>品牌</label><input id="eqBrand" /></div>
+          <div><label>序列号</label><input id="eqSerialNo" /></div>
+          <div><label>规格</label><input id="eqSpec" /></div>
+          <div><label>价格</label><input id="eqPrice" type="number" step="0.01" /></div>
+          <div><label>经费来源</label><input id="eqFundSource" /></div>
+          <div><label>购入日期</label><input id="eqPurchaseDate" type="date" /></div>
+          <div><label>使用年限</label><input id="eqUseYears" type="number" /></div>
+          <div><label>供应商</label><input id="eqSupplier" /></div>
+          <div><label>保修期(月)</label><input id="eqWarrantyMonths" type="number" /></div>
+          <div><label>存放位置</label><select id="eqLocationId"></select></div>
+          <div><label>责任人</label><select id="eqResponsibleId"></select></div>
+          <div><label>状态</label><select id="eqStatus">
+            <option value="在库-可用">在库-可用</option>
+            <option value="在库-待维修">在库-待维修</option>
+            <option value="在库-已预约">在库-已预约</option>
+            <option value="借出">借出</option>
+            <option value="送修">送修</option>
+            <option value="报废">报废</option>
+            <option value="丢失">丢失</option>
+          </select></div>
+          <div><label>重要设备</label><select id="eqIsImportant"><option value="false">否</option><option value="true">是</option></select></div>
+          <div><label>标签</label><input id="eqTags" placeholder="多个标签用逗号分隔" /></div>
+          <div><label>检定周期(月)</label><input id="eqCalibrationPeriodMonths" type="number" /></div>
+          <div><label>上次检定日期</label><input id="eqLastCalibrationDate" type="date" /></div>
+          <div><label>下次检定日期</label><input id="eqNextCalibrationDate" type="date" /></div>
+        </div>
+        <div style="margin-top: 12px;"><label>备注</label><textarea id="eqRemark" rows="2"></textarea></div>
+        <div style="margin-top: 16px;">
+          <label style="font-size:14px;font-weight:600;">附件上传</label>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <input type="file" id="eqFileInput" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" style="flex:1;" />
+            <button type="button" class="btn btn-primary btn-sm" onclick="uploadAttachment()">上传</button>
+          </div>
+          <div id="eqAttachmentList" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('equipmentModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 借用申请弹窗 -->
+  <div class="modal-overlay" id="borrowModal">
+    <div class="modal" style="max-width:700px;">
+      <h3>申请借用设备</h3>
+      <form id="borrowForm">
+        <div class="form-grid">
+          <div><label>设备 *</label><select id="borrowEquipmentId" required></select></div>
+          <div><label>预计归还日期 *</label><input id="borrowReturnDate" type="date" required /></div>
+          <div><label>联系电话</label><input id="borrowPhone" placeholder="手机号码" /></div>
+          <div><label>导师（学生/重要设备必填）</label><select id="borrowMentorId"><option value="">请选择</option></select></div>
+        </div>
+        <div style="margin-top: 12px;"><label>借用用途 *</label><textarea id="borrowPurpose" rows="2" required></textarea></div>
+        <div style="margin-top: 12px;"><label>使用地点</label><input id="borrowUseLocation" placeholder="如：实验室A301" /></div>
+        <div style="margin-top: 12px;"><label>配件清单</label><textarea id="borrowAccessories" rows="2" placeholder="如：电源线、鼠标、说明书"></textarea></div>
+        <div style="margin-top: 12px;"><label>备注</label><textarea id="borrowRemark" rows="2"></textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('borrowModal')">取消</button>
+          <button type="submit" class="btn btn-primary">提交申请</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 归还验收弹窗 -->
+  <div class="modal-overlay" id="returnModal">
+    <div class="modal" style="max-width:600px;">
+      <h3>归还验收</h3>
+      <form id="returnForm">
+        <input type="hidden" id="returnRecordId" />
+        <div style="margin-bottom:12px;">
+          <label>验收结果 *</label>
+          <select id="returnResult" required style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+            <option value="">请选择</option>
+            <option value="完好">完好 - 设备正常，状态变为"在库-可用"</option>
+            <option value="损坏">损坏 - 设备故障，状态变为"在库-待维修"</option>
+            <option value="缺件">缺件 - 配件不全，状态变为"在库-待维修"</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;"><label>配件核对</label><textarea id="returnAccessories" rows="2" placeholder="如：电源线齐全、鼠标完好"></textarea></div>
+        <div style="margin-bottom:12px;"><label>损坏/缺件说明</label><textarea id="returnDamageDesc" rows="2" placeholder="如有损坏或缺件请详细说明"></textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('returnModal')">取消</button>
+          <button type="submit" class="btn btn-primary">确认归还</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 续借申请弹窗 -->
+  <div class="modal-overlay" id="renewalModal">
+    <div class="modal">
+      <h3>申请续借</h3>
+      <form id="renewalForm">
+        <input type="hidden" id="renewalRecordId" />
+        <div style="margin-bottom:12px;"><label>续借归还日期 *</label><input id="renewalReturnDate" type="date" required /></div>
+        <div style="margin-bottom:12px;"><label>续借原因</label><textarea id="renewalRemark" rows="2" placeholder="请说明续借原因"></textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('renewalModal')">取消</button>
+          <button type="submit" class="btn btn-primary">提交续借</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 领取确认弹窗 -->
+  <div class="modal-overlay" id="pickupModal">
+    <div class="modal">
+      <h3>领取确认</h3>
+      <form id="pickupForm">
+        <input type="hidden" id="pickupRecordId" />
+        <div style="margin-bottom:12px;"><label>设备状态确认</label>
+          <select id="pickupEquipmentStatus" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+            <option value="正常">正常</option>
+            <option value="有轻微划痕">有轻微划痕</option>
+            <option value="配件不全">配件不全</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('pickupModal')">取消</button>
+          <button type="submit" class="btn btn-primary">确认领取</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 分类弹窗 -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal">
+      <h3 id="categoryModalTitle">新增分类</h3>
+      <form id="categoryForm">
+        <input type="hidden" id="catId" />
+        <div class="form-grid">
+          <div><label>分类编码 *</label><input id="catCode" required /></div>
+          <div><label>分类名称 *</label><input id="catName" required /></div>
+          <div><label>父分类</label><select id="catParentId"><option value="">无</option></select></div>
+          <div><label>排序</label><input id="catSortOrder" type="number" value="0" /></div>
+          <div><label>状态</label><select id="catStatus"><option value="启用">启用</option><option value="停用">停用</option></select></div>
+        </div>
+        <div style="margin-top: 12px;"><label>描述</label><textarea id="catDescription" rows="2"></textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('categoryModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 位置弹窗 -->
+  <div class="modal-overlay" id="locationModal">
+    <div class="modal">
+      <h3 id="locationModalTitle">新增位置</h3>
+      <form id="locationForm">
+        <input type="hidden" id="locId" />
+        <div class="form-grid">
+          <div><label>位置编码 *</label><input id="locCode" required /></div>
+          <div><label>位置名称 *</label><input id="locName" required /></div>
+          <div><label>所属楼栋</label><select id="locBuildingId"><option value="">请选择（可选）</option></select></div>
+          <div><label>房间号</label><input id="locRoomNumber" /></div>
+          <div><label>楼层</label><input id="locFloor" type="number" /></div>
+          <div><label>状态</label><select id="locStatus"><option value="启用">启用</option><option value="停用">停用</option></select></div>
+        </div>
+        <div style="margin-top: 12px;"><label>描述</label><textarea id="locDescription" rows="2"></textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-light" onclick="closeModal('locationModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 批量导入弹窗 -->
+  <div class="modal-overlay" id="importModal">
+    <div class="modal">
+      <h3>批量导入设备</h3>
+      <div style="margin-bottom:16px;">
+        <p style="color:var(--muted);font-size:14px;margin:0 0 12px 0;">
+          请按照模板格式填写设备信息，支持 .xlsx 格式。资产编号必须唯一。
+        </p>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+          <button class="btn btn-light" onclick="downloadTemplate()">下载导入模板</button>
+          <span style="font-size:12px;color:var(--muted);">模板包含19列：资产编号*、设备名称*、型号、类别编码、计量单位、品牌、序列号、规格、价格、经费来源、购入日期、使用年限、供应商、保修期(月)、存放位置编码、所属部门编码、是否重要设备、标签、备注</span>
+        </div>
+        <div style="border:2px dashed var(--line-strong);border-radius:12px;padding:24px;text-align:center;">
+          <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(this)" />
+          <button class="btn btn-primary" onclick="document.getElementById('importFileInput').click()">选择Excel文件</button>
+          <p style="color:var(--muted);font-size:12px;margin-top:8px;" id="importFileName">未选择文件</p>
+        </div>
+        <div id="importResult" style="margin-top:16px;display:none;">
+          <div style="display:flex;gap:12px;margin-bottom:8px;">
+            <span class="tag" style="background:#dcfce7;color:#16a34a;" id="importSuccessCount">成功: 0</span>
+            <span class="tag" style="background:#fef2f2;color:#dc2626;" id="importFailCount">失败: 0</span>
+          </div>
+          <div id="importFailList" style="max-height:200px;overflow-y:auto;font-size:12px;color:var(--danger);"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-light" onclick="closeModal('importModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    let currentUser = null;
+
+    // 获取认证token（从父窗口或localStorage）
+    function getAuthToken() {
+      try {
+        const parentToken = window.parent.localStorage.getItem('auth_token');
+        const localToken = localStorage.getItem('auth_token');
+        console.log('getAuthToken - parentToken:', parentToken ? '存在' : '空', 'localToken:', localToken ? '存在' : '空');
+        return parentToken || localToken;
+      } catch (e) {
+        console.error('getAuthToken 跨域错误:', e);
+        return localStorage.getItem('auth_token');
+      }
+    }
+
+    // 封装带token的fetch请求
+    async function apiFetch(url, options = {}) {
+      const token = getAuthToken();
+      console.log('apiFetch - URL:', url, 'Token:', token ? '存在' : '空');
+      const headers = options.headers || {};
+      if (token && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      // 注意：文件上传时不要设置Content-Type，让浏览器自动设置boundary
+      const isFormData = options.body instanceof FormData;
+      if (!isFormData && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      try {
+        const res = await fetch(url, { ...options, headers });
+        console.log('apiFetch - 响应状态:', res.status);
+        if (res.status === 401 || res.status === 403) {
+          showToast('登录已过期，请重新登录', true);
+          window.parent.location.href = '/login.html';
+          throw new Error('未授权');
+        }
+        return res;
+      } catch (e) {
+        console.error('apiFetch 网络错误:', e);
+        throw e;
+      }
+    }
+
+    // Tab 切换
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'equipment') loadEquipment();
+        if (tab.dataset.tab === 'borrow') loadBorrowRecords();
+        if (tab.dataset.tab === 'category') loadCategories();
+        if (tab.dataset.tab === 'location') loadLocations();
+        if (tab.dataset.tab === 'statistics') loadStatistics();
+      });
+    });
+
+    // 页面初始加载数据
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('equipment-manage.html DOMContentLoaded');
+      // 延迟加载，确保父窗口 token 已准备好
+      setTimeout(() => {
+        console.log('开始加载设备数据...');
+        loadEquipment();
+        loadCategories();
+        loadLocations();
+      }, 300);
+    });
+
+    // 如果首次加载失败，提供重试按钮
+    window.retryLoadEquipment = function() {
+      console.log('手动重试加载设备数据...');
+      loadEquipment();
+      loadCategories();
+      loadLocations();
+    };
+
+    // Toast 提示
+    function showToast(msg, isError) {
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + (isError ? 'error' : 'success');
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // 关闭弹窗
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // 加载设备列表
+    async function loadEquipment() {
+      const assetNo = document.getElementById('eqSearchAssetNo').value;
+      const name = document.getElementById('eqSearchName').value;
+      const status = document.getElementById('eqSearchStatus').value;
+      const categoryId = document.getElementById('eqSearchCategory').value;
+      const locationId = document.getElementById('eqSearchLocation').value;
+      let url = `${API_BASE}/equipment?`;
+      if (assetNo) url += `assetNo=${encodeURIComponent(assetNo)}&`;
+      if (name) url += `name=${encodeURIComponent(name)}&`;
+      if (status) url += `status=${encodeURIComponent(status)}&`;
+      if (categoryId) url += `categoryId=${categoryId}&`;
+      if (locationId) url += `locationId=${locationId}&`;
+
+      try {
+        console.log('加载设备列表，URL:', url);
+        const res = await apiFetch(url);
+        console.log('API 响应状态:', res.status);
+        const data = await res.json();
+        console.log('设备数据:', data);
+        
+        // 加载借还记录，用于关联已预约设备
+        const borrowRes = await apiFetch(`${API_BASE}/equipment-borrow?status=已批准`);
+        const borrowData = await borrowRes.json();
+        const approvedRecords = borrowData.filter(r => r.status === '已批准');
+        
+        const tbody = document.getElementById('equipmentTable');
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无数据</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(eq => {
+          const statusClass = eq.status === '在库-可用' ? 'status-available' :
+                              eq.status === '借出' ? 'status-borrowed' :
+                              eq.status === '在库-待维修' ? 'status-pending-repair' :
+                              eq.status === '在库-已预约' ? 'status-reserved' :
+                              eq.status === '送修' ? 'status-repairing' :
+                              eq.status === '报废' ? 'status-scrapped' : 'status-lost';
+          
+          // 查找已预约设备对应的借还记录
+          let reservedInfo = '';
+          if (eq.status === '在库-已预约') {
+            const record = approvedRecords.find(r => r.equipmentId === eq.id);
+            if (record) {
+              reservedInfo = `<div style="font-size:12px;color:#666;margin-top:4px;">
+                借用人：${record.borrowerName} | 
+                用途：${record.purpose} | 
+                预计归还：${record.expectedReturnDate}
+              </div>`;
+            }
+          }
+          
+          let actions = `<button class="btn btn-primary btn-sm" onclick="editEquipment(${eq.id})">编辑</button>
+                         <button class="btn btn-danger btn-sm" onclick="deleteEquipment(${eq.id})">删除</button>`;
+          if (eq.status === '在库-可用') {
+            actions += `<button class="btn btn-success btn-sm" onclick="borrowEquipment(${eq.id})">借出</button>
+                        <button class="btn btn-warning btn-sm" onclick="markForRepair(${eq.id})">标记待维修</button>
+                        <button class="btn btn-light btn-sm" onclick="markAsLost(${eq.id})">标记丢失</button>`;
+          } else if (eq.status === '在库-待维修') {
+            actions += `<button class="btn btn-warning btn-sm" onclick="sendForRepair(${eq.id})">送修</button>
+                        <button class="btn btn-danger btn-sm" onclick="scrapEquipment(${eq.id})">报废</button>
+                        <button class="btn btn-light btn-sm" onclick="markAsLost(${eq.id})">标记丢失</button>`;
+          } else if (eq.status === '在库-已预约') {
+            // 已预约设备无额外操作
+          } else if (eq.status === '借出') {
+            actions += `<button class="btn btn-success btn-sm" onclick="returnEquipment(${eq.id})">归还</button>`;
+          } else if (eq.status === '送修') {
+            actions += `<button class="btn btn-success btn-sm" onclick="repairComplete(${eq.id})">维修入库</button>`;
+          } else if (eq.status === '报废') {
+            // 报废设备无操作
+          } else if (eq.status === '丢失') {
+            actions += `<button class="btn btn-success btn-sm" onclick="recoverEquipment(${eq.id})">找回</button>`;
+          }
+          if (eq.attachments) {
+            actions += `<button class="btn btn-light btn-sm" onclick="viewAttachments(${eq.id})">附件 (${JSON.parse(eq.attachments).length})</button>`;
+          }
+          return `<tr>
+            <td>${eq.assetNo}</td>
+            <td>${eq.name}${eq.isImportant ? '<span class="important-badge">重要</span>' : ''}${reservedInfo}</td>
+            <td>${eq.model || '-'}</td>
+            <td>${eq.categoryName || '-'}</td>
+            <td>${eq.locationName || '-'}</td>
+            <td><span class="status-dot ${statusClass}"></span>${eq.status}</td>
+            <td>${eq.responsibleName || '-'}</td>
+            <td>${actions}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error('加载设备列表失败:', e);
+        showToast('加载设备列表失败：' + e.message, true);
+      }
+    }
+
+    // 状态流转操作
+    async function borrowEquipment(id) {
+      if (!confirm('确定借出该设备？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/borrow`, { method: 'POST' });
+        if (res.ok) { showToast('已借出'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function returnEquipment(id) {
+      if (!confirm('确认归还该设备？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/return`, { method: 'POST' });
+        if (res.ok) { showToast('已归还'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function markAsLost(id) {
+      if (!confirm('确定标记该设备为丢失？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/mark-lost`, { method: 'POST' });
+        if (res.ok) { showToast('已标记为丢失'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function markForRepair(id) {
+      if (!confirm('确定将该设备标记为待维修？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/mark-repair`, { method: 'POST' });
+        if (res.ok) { showToast('已标记为待维修'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function sendForRepair(id) {
+      if (!confirm('确定将该设备送修？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/send-repair`, { method: 'POST' });
+        if (res.ok) { showToast('已送修'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function repairComplete(id) {
+      if (!confirm('确认维修完成并入库？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/repair-complete`, { method: 'POST' });
+        if (res.ok) { showToast('已入库'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function scrapEquipment(id) {
+      if (!confirm('确定报废该设备？此操作不可恢复！')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/scrap`, { method: 'POST' });
+        if (res.ok) { showToast('已报废'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function recoverEquipment(id) {
+      if (!confirm('确认找回该设备？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}/actions/recover`, { method: 'POST' });
+        if (res.ok) { showToast('已找回'); loadEquipment(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    // 显示设备弹窗
+    async function showEquipmentModal(id) {
+      document.getElementById('equipmentModalTitle').textContent = id ? '编辑设备' : '新增设备';
+      document.getElementById('equipmentForm').reset();
+      document.getElementById('eqId').value = '';
+      document.getElementById('eqAssetNo').removeAttribute('readonly');
+      document.getElementById('eqAssetNo').style.background = '#fff';
+
+      // 加载分类下拉
+      const catRes = await apiFetch(`${API_BASE}/equipment-categories`);
+      const categories = await catRes.json();
+      document.getElementById('eqCategoryId').innerHTML = '<option value="">请选择</option>' +
+        categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+      // 加载位置下拉
+      const locRes = await apiFetch(`${API_BASE}/equipment-locations`);
+      const locations = await locRes.json();
+      document.getElementById('eqLocationId').innerHTML = '<option value="">请选择</option>' +
+        locations.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+
+      // 加载责任人下拉
+      const userRes = await apiFetch(`${API_BASE}/users`);
+      const users = await userRes.json();
+      document.getElementById('eqResponsibleId').innerHTML = '<option value="">请选择</option>' +
+        users.map(u => `<option value="${u.id}">${u.realName}</option>`).join('');
+
+      if (id) {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}`);
+        const eq = await res.json();
+        document.getElementById('eqId').value = eq.id;
+        document.getElementById('eqAssetNo').value = eq.assetNo;
+        document.getElementById('eqAssetNo').setAttribute('readonly', 'readonly');
+        document.getElementById('eqAssetNo').style.background = '#f3f4f6';
+        document.getElementById('eqName').value = eq.name;
+        document.getElementById('eqModel').value = eq.model || '';
+        document.getElementById('eqCategoryId').value = eq.categoryId || '';
+        document.getElementById('eqUnit').value = eq.unit || '';
+        document.getElementById('eqBrand').value = eq.brand || '';
+        document.getElementById('eqSerialNo').value = eq.serialNo || '';
+        document.getElementById('eqSpec').value = eq.spec || '';
+        document.getElementById('eqPrice').value = eq.price || '';
+        document.getElementById('eqFundSource').value = eq.fundSource || '';
+        document.getElementById('eqPurchaseDate').value = eq.purchaseDate || '';
+        document.getElementById('eqUseYears').value = eq.useYears || '';
+        document.getElementById('eqSupplier').value = eq.supplier || '';
+        document.getElementById('eqWarrantyMonths').value = eq.warrantyMonths || '';
+        document.getElementById('eqLocationId').value = eq.locationId || '';
+        document.getElementById('eqResponsibleId').value = eq.responsibleId || '';
+        document.getElementById('eqStatus').value = eq.status || '在库-可用';
+        document.getElementById('eqIsImportant').value = eq.isImportant ? 'true' : 'false';
+        document.getElementById('eqTags').value = eq.tags || '';
+        document.getElementById('eqCalibrationPeriodMonths').value = eq.calibrationPeriodMonths || '';
+        document.getElementById('eqLastCalibrationDate').value = eq.lastCalibrationDate || '';
+        document.getElementById('eqNextCalibrationDate').value = eq.nextCalibrationDate || '';
+        document.getElementById('eqRemark').value = eq.remark || '';
+        loadAttachments(eq);
+      } else {
+        currentAttachments = [];
+        renderAttachmentList();
+      }
+      document.getElementById('equipmentModal').classList.add('active');
+    }
+
+    // 编辑设备
+    function editEquipment(id) { showEquipmentModal(id); }
+
+    // 删除设备
+    async function deleteEquipment(id) {
+      if (!confirm('确定删除该设备？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('删除成功');
+          loadEquipment();
+        } else {
+          const err = await res.json();
+          showToast(err.message || '删除失败', true);
+        }
+      } catch (e) { showToast('删除失败：' + e.message, true); }
+    }
+
+    // 设备表单提交
+    document.getElementById('equipmentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('eqId').value;
+      const data = {
+        assetNo: document.getElementById('eqAssetNo').value,
+        name: document.getElementById('eqName').value,
+        model: document.getElementById('eqModel').value,
+        categoryId: document.getElementById('eqCategoryId').value || null,
+        unit: document.getElementById('eqUnit').value,
+        brand: document.getElementById('eqBrand').value,
+        serialNo: document.getElementById('eqSerialNo').value,
+        spec: document.getElementById('eqSpec').value,
+        price: document.getElementById('eqPrice').value ? parseFloat(document.getElementById('eqPrice').value) : null,
+        fundSource: document.getElementById('eqFundSource').value,
+        purchaseDate: document.getElementById('eqPurchaseDate').value || null,
+        useYears: document.getElementById('eqUseYears').value ? parseInt(document.getElementById('eqUseYears').value) : null,
+        supplier: document.getElementById('eqSupplier').value,
+        warrantyMonths: document.getElementById('eqWarrantyMonths').value ? parseInt(document.getElementById('eqWarrantyMonths').value) : null,
+        locationId: document.getElementById('eqLocationId').value || null,
+        responsibleId: document.getElementById('eqResponsibleId').value || null,
+        status: document.getElementById('eqStatus').value || '在库-可用',
+        isImportant: document.getElementById('eqIsImportant').value === 'true',
+        tags: document.getElementById('eqTags').value,
+        remark: document.getElementById('eqRemark').value,
+        attachments: currentAttachments.length > 0 ? JSON.stringify(currentAttachments) : null,
+        calibrationPeriodMonths: document.getElementById('eqCalibrationPeriodMonths').value ? parseInt(document.getElementById('eqCalibrationPeriodMonths').value) : null,
+        lastCalibrationDate: document.getElementById('eqLastCalibrationDate').value || null,
+        nextCalibrationDate: document.getElementById('eqNextCalibrationDate').value || null
+      };
+
+      try {
+        const url = id ? `${API_BASE}/equipment/${id}` : `${API_BASE}/equipment`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) {
+          showToast(id ? '更新成功' : '新增成功');
+          closeModal('equipmentModal');
+          loadEquipment();
+        } else {
+          const err = await res.json();
+          showToast(err.message || '操作失败', true);
+        }
+      } catch (e) { showToast('操作失败：' + e.message, true); }
+    });
+
+    // 加载借还记录
+    async function loadBorrowRecords() {
+      const status = document.getElementById('borrowSearchStatus').value;
+      let url = `${API_BASE}/equipment-borrow?`;
+      if (status) url += `status=${encodeURIComponent(status)}&`;
+
+      try {
+        const res = await apiFetch(url);
+        const data = await res.json();
+        const tbody = document.getElementById('borrowTable');
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#999;">暂无数据</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(r => {
+          const statusClass = r.status === '待导师审批' ? 'status-pending' :
+                              r.status === '待审批' ? 'status-pending' :
+                              r.status === '已批准' ? 'status-approved' :
+                              r.status === '已借出' ? 'status-borrowed' :
+                              r.status === '已归还' ? 'status-returned' :
+                              r.status === '已拒绝' ? 'status-rejected' : 'status-cancelled';
+          let actions = '';
+          if (r.status === '待导师审批') {
+            actions = `<button class="btn btn-success btn-sm" onclick="mentorApprove(${r.id}, true)">导师批准</button>
+                       <button class="btn btn-danger btn-sm" onclick="mentorApprove(${r.id}, false)">导师拒绝</button>`;
+          } else if (r.status === '待审批') {
+            actions = `<button class="btn btn-success btn-sm" onclick="approveBorrow(${r.id})">批准</button>
+                       <button class="btn btn-danger btn-sm" onclick="rejectBorrow(${r.id})">拒绝</button>`;
+          } else if (r.status === '已批准') {
+            actions = `<button class="btn btn-primary btn-sm" onclick="showPickupModal(${r.id})">领取</button>`;
+          } else if (r.status === '已借出') {
+            actions = `<button class="btn btn-warning btn-sm" onclick="showReturnModal(${r.id})">归还</button>`;
+          }
+          let renewalBadge = '';
+          if (r.renewalStatus === '申请中') renewalBadge = '<span style="color:#f59e0b;">续借中</span>';
+          else if (r.renewalStatus === '已通过') renewalBadge = '<span style="color:#10b981;">已续借</span>';
+          else if (r.renewalStatus === '已拒绝') renewalBadge = '<span style="color:#ef4444;">续借拒</span>';
+          
+          return `<tr>
+            <td>${r.recordNo}</td>
+            <td>${r.equipmentName}</td>
+            <td>${r.equipmentAssetNo || '-'}</td>
+            <td>${r.borrowerName}</td>
+            <td>${r.phone || '-'}</td>
+            <td>${r.purpose}</td>
+            <td>${r.useLocation || '-'}</td>
+            <td>${r.expectedReturnDate}</td>
+            <td>${r.actualReturnDate || '-'}</td>
+            <td>${r.returnResult || '-'}</td>
+            <td><span class="status-dot ${statusClass}"></span>${r.status}${r.isOverdue ? '<br><span style="color:#ef4444;font-size:12px;">已逾期</span>' : ''}</td>
+            <td>${renewalBadge}</td>
+            <td>${actions}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) { showToast('加载借还记录失败：' + e.message, true); }
+    }
+
+    // 加载逾期记录
+    async function loadOverdueRecords() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/overdue`);
+        const data = await res.json();
+        const area = document.getElementById('overdueAlertArea');
+        const list = document.getElementById('overdueList');
+        if (data.length === 0) {
+          area.style.display = 'none';
+          showToast('暂无逾期记录');
+          return;
+        }
+        area.style.display = 'block';
+        list.innerHTML = data.map(r => 
+          `<div style="padding:8px;margin:4px 0;background:#fff;border-radius:4px;">
+            <strong>${r.equipmentName}</strong> - 借用人：${r.borrowerName}，
+            应还日期：${r.expectedReturnDate}，
+            逾期天数：${Math.floor((Date.now() - new Date(r.expectedReturnDate).getTime()) / 86400000)}天
+          </div>`
+        ).join('');
+      } catch (e) { showToast('加载逾期记录失败：' + e.message, true); }
+    }
+
+    // 显示借用弹窗
+    async function showBorrowModal() {
+      document.getElementById('borrowForm').reset();
+      const res = await apiFetch(`${API_BASE}/equipment?status=在库-可用`);
+      const equipment = await res.json();
+      document.getElementById('borrowEquipmentId').innerHTML = '<option value="">请选择</option>' +
+        equipment.map(e => `<option value="${e.id}">${e.name} (${e.assetNo})</option>`).join('');
+      
+      // 加载导师列表
+      try {
+        const mentorRes = await apiFetch(`${API_BASE}/users?role=MENTOR`);
+        const mentors = await mentorRes.json();
+        document.getElementById('borrowMentorId').innerHTML = '<option value="">请选择</option>' +
+          mentors.map(m => `<option value="${m.id}">${m.name} (${m.username})</option>`).join('');
+      } catch(e) {
+        // 如果获取导师列表失败，忽略
+      }
+      
+      document.getElementById('borrowModal').classList.add('active');
+    }
+
+    // 借用表单提交
+    document.getElementById('borrowForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mentorId = document.getElementById('borrowMentorId').value;
+      const data = {
+        equipmentId: parseInt(document.getElementById('borrowEquipmentId').value),
+        purpose: document.getElementById('borrowPurpose').value,
+        expectedReturnDate: document.getElementById('borrowReturnDate').value,
+        remark: document.getElementById('borrowRemark').value,
+        phone: document.getElementById('borrowPhone').value,
+        useLocation: document.getElementById('borrowUseLocation').value,
+        accessoriesInfo: document.getElementById('borrowAccessories').value
+      };
+      if (mentorId) {
+        data.mentorId = parseInt(mentorId);
+      }
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) {
+          showToast('申请提交成功');
+          closeModal('borrowModal');
+          loadBorrowRecords();
+        } else {
+          const err = await res.json();
+          showToast(err.message || '提交失败', true);
+        }
+      } catch (e) { showToast('提交失败：' + e.message, true); }
+    });
+
+    async function approveBorrow(id) {
+      const newReturnDate = prompt('请输入新的预计归还日期（YYYY-MM-DD），留空则不变：');
+      try {
+        const body = { remark: '' };
+        if (newReturnDate) body.newReturnDate = newReturnDate;
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/${id}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (res.ok) { showToast('已批准'); loadBorrowRecords(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    async function rejectBorrow(id) {
+      const reason = prompt('请输入拒绝原因：');
+      if (!reason) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remark: reason }) });
+        if (res.ok) { showToast('已拒绝'); loadBorrowRecords(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    // 导师审批
+    async function mentorApprove(id, approved) {
+      const remark = prompt(approved ? '请输入审批备注（可选）：' : '请输入拒绝原因：');
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/${id}/mentor-approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approved, remark: remark || '' })
+        });
+        if (res.ok) { showToast(approved ? '导师已批准' : '导师已拒绝'); loadBorrowRecords(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    }
+
+    // 显示领取确认弹窗
+    function showPickupModal(id) {
+      document.getElementById('pickupRecordId').value = id;
+      document.getElementById('pickupEquipmentStatus').value = '正常';
+      document.getElementById('pickupModal').classList.add('active');
+    }
+
+    // 领取表单提交
+    document.getElementById('pickupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('pickupRecordId').value;
+      const equipmentStatus = document.getElementById('pickupEquipmentStatus').value;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/${id}/pickup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ equipmentStatus })
+        });
+        if (res.ok) { showToast('领取成功'); closeModal('pickupModal'); loadBorrowRecords(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    });
+
+    // 显示归还验收弹窗
+    function showReturnModal(id) {
+      document.getElementById('returnRecordId').value = id;
+      document.getElementById('returnForm').reset();
+      document.getElementById('returnModal').classList.add('active');
+    }
+
+    // 归还表单提交
+    document.getElementById('returnForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('returnRecordId').value;
+      const data = {
+        returnResult: document.getElementById('returnResult').value,
+        accessoriesInfo: document.getElementById('returnAccessories').value,
+        damageDescription: document.getElementById('returnDamageDesc').value
+      };
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/${id}/return`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) { showToast('归还成功'); closeModal('returnModal'); loadBorrowRecords(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    });
+
+    // 显示续借弹窗
+    function showRenewalModal(id) {
+      document.getElementById('renewalRecordId').value = id;
+      document.getElementById('renewalForm').reset();
+      document.getElementById('renewalModal').classList.add('active');
+    }
+
+    // 续借表单提交
+    document.getElementById('renewalForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('renewalRecordId').value;
+      const data = {
+        newReturnDate: document.getElementById('renewalReturnDate').value,
+        remark: document.getElementById('renewalRemark').value
+      };
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-borrow/${id}/renewal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) { showToast('续借申请已提交'); closeModal('renewalModal'); loadBorrowRecords(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    });
+
+    // 加载分类
+    async function loadCategories() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-categories`);
+        const data = await res.json();
+        document.getElementById('categoryTable').innerHTML = data.length === 0 ?
+          '<tr><td colspan="7" style="text-align:center;color:#999;">暂无数据</td></tr>' :
+          data.map(c => `<tr>
+            <td>${c.code}</td>
+            <td>${c.name}</td>
+            <td>${c.parentName || '-'}</td>
+            <td>${c.sortOrder}</td>
+            <td>${c.status}</td>
+            <td>${c.description || '-'}</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="editCategory(${c.id})">编辑</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteCategory(${c.id})">删除</button>
+            </td>
+          </tr>`).join('');
+      } catch (e) { showToast('加载分类失败', true); }
+    }
+
+    async function showCategoryModal(id) {
+      document.getElementById('categoryModalTitle').textContent = id ? '编辑分类' : '新增分类';
+      document.getElementById('categoryForm').reset();
+      document.getElementById('catId').value = '';
+
+      const res = await apiFetch(`${API_BASE}/equipment-categories`);
+      const categories = await res.json();
+      document.getElementById('catParentId').innerHTML = '<option value="">无</option>' +
+        categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+      if (id) {
+        const r = await apiFetch(`${API_BASE}/equipment-categories/${id}`);
+        const cat = await r.json();
+        document.getElementById('catId').value = cat.id;
+        document.getElementById('catCode').value = cat.code;
+        document.getElementById('catName').value = cat.name;
+        document.getElementById('catParentId').value = cat.parentId || '';
+        document.getElementById('catSortOrder').value = cat.sortOrder;
+        document.getElementById('catStatus').value = cat.status;
+        document.getElementById('catDescription').value = cat.description || '';
+      }
+      document.getElementById('categoryModal').classList.add('active');
+    }
+
+    function editCategory(id) { showCategoryModal(id); }
+
+    async function deleteCategory(id) {
+      if (!confirm('确定删除该分类？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-categories/${id}`, { method: 'DELETE' });
+        if (res.ok) { showToast('删除成功'); loadCategories(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('删除失败', true); }
+    }
+
+    document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('catId').value;
+      const data = {
+        code: document.getElementById('catCode').value,
+        name: document.getElementById('catName').value,
+        parentId: document.getElementById('catParentId').value || null,
+        sortOrder: parseInt(document.getElementById('catSortOrder').value),
+        status: document.getElementById('catStatus').value,
+        description: document.getElementById('catDescription').value
+      };
+      try {
+        const url = id ? `${API_BASE}/equipment-categories/${id}` : `${API_BASE}/equipment-categories`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        if (res.ok) { showToast(id ? '更新成功' : '新增成功'); closeModal('categoryModal'); loadCategories(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    });
+
+    // 加载位置
+    async function loadLocations() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-locations`);
+        const data = await res.json();
+        // #region debug-point 4
+        console.log('[DEBUG-LOCATION] API返回数据:', JSON.stringify(data, null, 2));
+        if (data.length > 0) {
+          console.log('[DEBUG-LOCATION] 第一条数据:', JSON.stringify(data[0], null, 2));
+        }
+        // #endregion
+        document.getElementById('locationTable').innerHTML = data.length === 0 ?
+          '<tr><td colspan="8" style="text-align:center;color:#999;">暂无数据</td></tr>' :
+          data.map(l => `<tr>
+            <td>${l.code}</td>
+            <td>${l.name}</td>
+            <td>${l.buildingName || '-'}</td>
+            <td>${l.roomNumber || '-'}</td>
+            <td>${l.floor || '-'}</td>
+            <td>${l.status}</td>
+            <td>${l.description || '-'}</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="editLocation(${l.id})">编辑</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteLocation(${l.id})">删除</button>
+            </td>
+          </tr>`).join('');
+      } catch (e) { showToast('加载位置失败', true); }
+    }
+
+    async function showLocationModal(id) {
+      document.getElementById('locationModalTitle').textContent = id ? '编辑位置' : '新增位置';
+      document.getElementById('locationForm').reset();
+      document.getElementById('locId').value = '';
+
+      // 加载场馆楼栋下拉（关联场馆管理模块）
+      try {
+        const buildingRes = await apiFetch(`${API_BASE}/buildings`);
+        const buildings = await buildingRes.json();
+        document.getElementById('locBuildingId').innerHTML = '<option value="">请选择（可选）</option>' +
+          buildings.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+      } catch (e) {}
+
+      if (id) {
+        const r = await apiFetch(`${API_BASE}/equipment-locations/${id}`);
+        const loc = await r.json();
+        document.getElementById('locId').value = loc.id;
+        document.getElementById('locCode').value = loc.code;
+        document.getElementById('locName').value = loc.name;
+        document.getElementById('locBuildingId').value = loc.buildingId || '';
+        document.getElementById('locRoomNumber').value = loc.roomNumber || '';
+        document.getElementById('locFloor').value = loc.floor || '';
+        document.getElementById('locStatus').value = loc.status;
+        document.getElementById('locDescription').value = loc.description || '';
+      }
+      document.getElementById('locationModal').classList.add('active');
+    }
+
+    function editLocation(id) { showLocationModal(id); }
+
+    async function deleteLocation(id) {
+      if (!confirm('确定删除该位置？')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-locations/${id}`, { method: 'DELETE' });
+        if (res.ok) { showToast('删除成功'); loadLocations(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('删除失败', true); }
+    }
+
+    document.getElementById('locationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('locId').value;
+      const data = {
+        code: document.getElementById('locCode').value,
+        name: document.getElementById('locName').value,
+        buildingId: document.getElementById('locBuildingId').value ? parseInt(document.getElementById('locBuildingId').value) : null,
+        roomNumber: document.getElementById('locRoomNumber').value,
+        floor: document.getElementById('locFloor').value ? parseInt(document.getElementById('locFloor').value) : null,
+        status: document.getElementById('locStatus').value,
+        description: document.getElementById('locDescription').value
+      };
+      try {
+        const url = id ? `${API_BASE}/equipment-locations/${id}` : `${API_BASE}/equipment-locations`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        if (res.ok) { showToast(id ? '更新成功' : '新增成功'); closeModal('locationModal'); loadLocations(); }
+        else { const err = await res.json(); showToast(err.message, true); }
+      } catch (e) { showToast('操作失败', true); }
+    });
+
+    // 加载统计
+    async function loadStatistics() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/statistics`);
+        const stats = await res.json();
+        document.getElementById('statsGrid').innerHTML = `
+          <div class="stat-card"><div class="num">${stats.totalEquipment}</div><div class="label">设备总数</div></div>
+          <div class="stat-card"><div class="num" style="color:var(--success)">${stats.available}</div><div class="label">在库可用</div></div>
+          <div class="stat-card"><div class="num" style="color:#ef4444">${stats.pendingRepair || 0}</div><div class="label">待维修</div></div>
+          <div class="stat-card"><div class="num" style="color:#8b5cf6">${stats.reserved || 0}</div><div class="label">已预约</div></div>
+          <div class="stat-card"><div class="num" style="color:var(--warning)">${stats.borrowed}</div><div class="label">借出中</div></div>
+          <div class="stat-card"><div class="num" style="color:#f97316">${stats.repairing || 0}</div><div class="label">送修中</div></div>
+          <div class="stat-card"><div class="num" style="color:#6b7280">${stats.scrapped}</div><div class="label">报废</div></div>
+          <div class="stat-card"><div class="num" style="color:#000">${stats.lost}</div><div class="label">丢失</div></div>
+        `;
+        if (stats.categoryCounts && stats.categoryCounts.length > 0) {
+          document.getElementById('statsCategoryTable').innerHTML = stats.categoryCounts.map(c =>
+            `<tr><td>${c.categoryName}</td><td>${c.count}</td></tr>`
+          ).join('');
+        } else {
+          document.getElementById('statsCategoryTable').innerHTML = '<tr><td colspan="2" style="text-align:center;color:#999;">暂无数据</td></tr>';
+        }
+      } catch (e) { showToast('加载统计失败', true); }
+      // 同时加载检定提醒
+      loadCalibrationReminders();
+    }
+
+    // 加载检定提醒
+    async function loadCalibrationReminders() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/calibration-reminders`);
+        const reminders = await res.json();
+        const today = new Date();
+        
+        if (reminders.length === 0) {
+          document.getElementById('calibrationReminderTable').innerHTML = 
+            '<tr><td colspan="6" style="text-align:center;color:#999;">暂无检定提醒</td></tr>';
+          return;
+        }
+        
+        document.getElementById('calibrationReminderTable').innerHTML = reminders.map(eq => {
+          const nextDate = new Date(eq.nextCalibrationDate);
+          const daysUntil = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+          let statusText, statusColor;
+          
+          if (daysUntil < 0) {
+            statusText = `已过期 ${Math.abs(daysUntil)} 天`;
+            statusColor = '#ef4444';
+          } else if (daysUntil === 0) {
+            statusText = '今天到期';
+            statusColor = '#ef4444';
+          } else if (daysUntil <= 7) {
+            statusText = `剩余 ${daysUntil} 天`;
+            statusColor = '#f59e0b';
+          } else {
+            statusText = `剩余 ${daysUntil} 天`;
+            statusColor = '#f97316';
+          }
+          
+          return `<tr>
+            <td>${eq.assetNo}</td>
+            <td>${eq.name}</td>
+            <td>${eq.calibrationPeriodMonths || '-'}</td>
+            <td>${eq.lastCalibrationDate || '-'}</td>
+            <td>${eq.nextCalibrationDate}</td>
+            <td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error('加载检定提醒失败:', e);
+      }
+    }
+
+    // 加载搜索分类下拉
+    async function loadSearchCategories() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-categories`);
+        const categories = await res.json();
+        document.getElementById('eqSearchCategory').innerHTML = '<option value="">全部分类</option>' +
+          categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      } catch (e) {}
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment-locations`);
+        const locations = await res.json();
+        document.getElementById('eqSearchLocation').innerHTML = '<option value="">全部位置</option>' +
+          locations.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+      } catch (e) {}
+    }
+
+    // ==================== 附件上传 ====================
+    let currentAttachments = [];
+
+    async function uploadAttachment() {
+      const fileInput = document.getElementById('eqFileInput');
+      const files = fileInput.files;
+      if (!files || files.length === 0) {
+        showToast('请选择文件', true);
+        return;
+      }
+
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+
+        try {
+          const res = await apiFetch(`${API_BASE}/files/upload`, {
+            method: 'POST',
+            body: formData
+          });
+          if (res.ok) {
+            const data = await res.json();
+            currentAttachments.push(data);
+            renderAttachmentList();
+            showToast(data.fileName + ' 上传成功');
+          } else {
+            const err = await res.json();
+            showToast('上传失败：' + (err.message || '未知错误'), true);
+          }
+        } catch (e) {
+          showToast('上传失败：' + e.message, true);
+        }
+      }
+      fileInput.value = '';
+    }
+
+    function renderAttachmentList() {
+      const container = document.getElementById('eqAttachmentList');
+      if (currentAttachments.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = currentAttachments.map((att, idx) => `
+        <div style="display:inline-flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px;">
+          <span>${att.fileName}</span>
+          <button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;" onclick="removeAttachment(${idx})">×</button>
+        </div>
+      `).join('');
+    }
+
+    function removeAttachment(idx) {
+      currentAttachments.splice(idx, 1);
+      renderAttachmentList();
+    }
+
+    function loadAttachments(eq) {
+      currentAttachments = [];
+      if (eq.attachments) {
+        try {
+          currentAttachments = JSON.parse(eq.attachments);
+        } catch (e) {
+          currentAttachments = [];
+        }
+      }
+      renderAttachmentList();
+    }
+
+    // ==================== 批量导入 ====================
+    function showImportModal() {
+      document.getElementById('importFileInput').value = '';
+      document.getElementById('importFileName').textContent = '未选择文件';
+      document.getElementById('importResult').style.display = 'none';
+      document.getElementById('importModal').classList.add('active');
+    }
+
+    function handleImportFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      document.getElementById('importFileName').textContent = file.name;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      showToast('正在导入，请稍候...');
+      apiFetch(`${API_BASE}/equipment/import`, {
+        method: 'POST',
+        body: formData
+      }).then(res => {
+        if (!res.ok) throw new Error('请求失败，状态码：' + res.status);
+        return res.json();
+      }).then(data => {
+        if (data.code === 500) {
+          showToast('导入失败：' + data.message, true);
+          return;
+        }
+        document.getElementById('importResult').style.display = 'block';
+        document.getElementById('importSuccessCount').textContent = '成功: ' + (data.successCount || 0);
+        document.getElementById('importFailCount').textContent = '失败: ' + (data.failCount || 0);
+
+        if (data.failList && data.failList.length > 0) {
+          document.getElementById('importFailList').innerHTML = data.failList.map(f =>
+            `<div>第${f.row}行：${f.error}</div>`
+          ).join('');
+        } else {
+          document.getElementById('importFailList').innerHTML = '';
+        }
+
+        showToast('导入完成：成功' + (data.successCount || 0) + '条，失败' + (data.failCount || 0) + '条');
+        loadEquipment();
+      }).catch(e => {
+        showToast('导入失败：' + e.message, true);
+      });
+    }
+
+    async function downloadTemplate() {
+      try {
+        const res = await apiFetch(`${API_BASE}/equipment/import-template`);
+        if (!res.ok) {
+          throw new Error('请求失败，状态码：' + res.status);
+        }
+        const data = await res.json();
+        if (!data || !data.columns) {
+          throw new Error('返回数据格式错误：缺少columns字段');
+        }
+        const headers = data.columns.map(c => c.name.replace('*', '')).join(',');
+        const notes = data.columns.map(c => c.note).join(',');
+        const csvContent = '\uFEFF' + headers + '\n' + notes + '\n';
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '设备导入模板.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('模板已下载');
+      } catch (e) {
+        console.error('下载模板失败:', e);
+        showToast('下载模板失败：' + e.message, true);
+      }
+    }
+
+    // 查看附件
+    async function viewAttachments(eqId) {
+      try {
+        const res = await fetch(`${API_BASE}/equipment/${eqId}`);
+        const eq = await res.json();
+        if (!eq.attachments) {
+          showToast('该设备暂无附件', true);
+          return;
+        }
+        const attachments = JSON.parse(eq.attachments);
+        const listHtml = attachments.map(att => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;">
+            <span style="font-size:14px;">${att.fileName}</span>
+            <a href="${API_BASE}/files/download/${att.savedName}" class="btn btn-primary btn-sm" style="text-decoration:none;">下载</a>
+          </div>
+        `).join('');
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay active';
+        overlay.innerHTML = `<div class="modal"><h3>设备附件 - ${eq.name}</h3>${listHtml}<div class="modal-actions"><button class="btn btn-light" onclick="this.closest('.modal-overlay').remove()">关闭</button></div></div>`;
+        document.body.appendChild(overlay);
+      } catch (e) {
+        showToast('加载附件失败', true);
+      }
+    }
+
+    // 页面初始化
+    async function init() {
+      try {
+        await Promise.all([
+          loadEquipment(),
+          loadSearchCategories(),
+          loadCategories(),
+          loadLocations()
+        ]);
+      } catch (e) {
+        console.error('初始化失败:', e);
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

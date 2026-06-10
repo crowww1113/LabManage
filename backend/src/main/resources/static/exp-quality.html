@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验课程教学质量登记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background: #fff;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .detail-item label {
+            display: block;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .detail-item .value {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .detail-full {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>实验课程教学质量登记</h1>
+    <div style="margin-bottom: 20px;">
+        <button class="btn" onclick="openAddModal()">新增登记</button>
+        <button class="btn" onclick="exportExpQuality()">导出 Word</button>
+    </div>
+    <table id="qualityTable">
+        <thead>
+            <tr>
+                <th>任务编号</th>
+                <th>机构</th>
+                <th>课程名</th>
+                <th>主讲教师</th>
+                <th>授课班级</th>
+                <th>考核方式</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- 新增/编辑模态框 -->
+    <div id="qualityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增登记</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>任务编号</label>
+                    <input type="number" id="modalTaskId" placeholder="请输入任务编号">
+                </div>
+                <div class="form-group">
+                    <label>机构</label>
+                    <input type="text" id="modalOrganization" placeholder="请输入机构名称">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>课程名</label>
+                <input type="text" id="modalCourseName" placeholder="请输入课程名称">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实验学时</label>
+                    <input type="number" id="modalExpHour" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>是否独立设课</label>
+                    <select id="modalIndependentCourse"></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>主讲教师</label>
+                    <input type="text" id="modalMainTeacher" placeholder="请输入教师姓名">
+                </div>
+                <div class="form-group">
+                    <label>教师职称</label>
+                    <input type="text" id="modalTeacherTitle" placeholder="请输入职称">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>实验技术人员</label>
+                    <input type="text" id="modalTechnician" placeholder="请输入技术人员姓名">
+                </div>
+                <div class="form-group">
+                    <label>技术人员职称</label>
+                    <input type="text" id="modalTechnicianTitle" placeholder="请输入职称">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>授课班级</label>
+                    <input type="text" id="modalClassName" placeholder="请输入班级名称">
+                </div>
+                <div class="form-group">
+                    <label>班级人数</label>
+                    <input type="number" id="modalStudentCount" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>计划开设实验个数</label>
+                    <input type="number" id="modalPlannedExpCount" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>实际开出个数</label>
+                    <input type="number" id="modalActualExpCount" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>未开出实验项目及原因</label>
+                <input type="text" id="modalMissedExpReason" placeholder="请输入未开出实验项目及原因">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>考核方式</label>
+                    <select id="modalAssessmentMethod"></select>
+                </div>
+                <div class="form-group">
+                    <label>考核人数</label>
+                    <input type="number" id="modalAssessmentCount" placeholder="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>考核时间</label>
+                <input type="text" id="modalAssessmentTime" placeholder="如：2025 年第 18 周">
+            </div>
+
+            <input type="hidden" id="modalQualityId">
+
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="saveQuality()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情模态框 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>登记详情</h2>
+                <span class="close" onclick="closeDetailModal()">&times;</span>
+            </div>
+
+            <div id="detailContent"></div>
+
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+<script>
+        console.log('exp-quality.html loaded');
+
+        window.onload = function () {
+            loadAllDictionaries().then(() => {
+                renderDictSelectOptions('modalIndependentCourse', 'yes_no', [{ value: '', text: '请选择' }]);
+                renderDictSelectOptions('modalAssessmentMethod', 'assessment_method', [{ value: '', text: '请选择' }]);
+            });
+            fetch('/api/exp-quality')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.querySelector('#qualityTable tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(quality => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${quality.taskId || ''}</td>
+                            <td>${quality.organization || ''}</td>
+                            <td>${quality.courseName || ''}</td>
+                            <td>${quality.mainTeacher || ''}</td>
+                            <td>${quality.className || ''}</td>
+                            <td>${quality.assessmentMethod || ''}</td>
+                            <td>
+                                <button class="btn btn-info" onclick="viewQuality(${quality.id})">详情</button>
+                                <button class="btn" onclick="editQuality(${quality.id})">编辑</button>
+                                <button class="btn btn-danger" onclick="deleteQuality(${quality.id})">删除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching data:', err);
+                    alert('加载数据失败：' + err.message);
+                });
+        };
+
+        function openModal(isEdit = false) {
+            document.getElementById('qualityModal').style.display = 'block';
+            document.getElementById('modalTitle').textContent = isEdit ? '编辑登记' : '新增登记';
+        }
+
+        function closeModal() {
+            document.getElementById('qualityModal').style.display = 'none';
+            clearModal();
+        }
+
+        function clearModal() {
+            document.getElementById('modalQualityId').value = '';
+            document.getElementById('modalTaskId').value = '';
+            document.getElementById('modalOrganization').value = '';
+            document.getElementById('modalCourseName').value = '';
+            document.getElementById('modalExpHour').value = '';
+            document.getElementById('modalIndependentCourse').value = '';
+            document.getElementById('modalMainTeacher').value = '';
+            document.getElementById('modalTeacherTitle').value = '';
+            document.getElementById('modalTechnician').value = '';
+            document.getElementById('modalTechnicianTitle').value = '';
+            document.getElementById('modalClassName').value = '';
+            document.getElementById('modalStudentCount').value = '';
+            document.getElementById('modalPlannedExpCount').value = '';
+            document.getElementById('modalActualExpCount').value = '';
+            document.getElementById('modalMissedExpReason').value = '';
+            document.getElementById('modalAssessmentMethod').value = '';
+            document.getElementById('modalAssessmentCount').value = '';
+            document.getElementById('modalAssessmentTime').value = '';
+        }
+
+        function openAddModal() {
+            openModal(false);
+        }
+
+        function viewQuality(id) {
+            fetch(`/api/exp-quality/${id}`)
+                .then(res => res.json())
+                .then(quality => {
+                    const detailContent = document.getElementById('detailContent');
+                    detailContent.innerHTML = `
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>任务编号</label>
+                                <div class="value">${quality.taskId || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>机构</label>
+                                <div class="value">${quality.organization || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item detail-full">
+                                <label>课程名</label>
+                                <div class="value">${quality.courseName || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>实验学时</label>
+                                <div class="value">${quality.expHour || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>是否独立设课</label>
+                                <div class="value">${quality.independentCourse != null ? (quality.independentCourse ? '是' : '否') : '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>主讲教师</label>
+                                <div class="value">${quality.mainTeacher || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>教师职称</label>
+                                <div class="value">${quality.teacherTitle || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>实验技术人员</label>
+                                <div class="value">${quality.technician || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>技术人员职称</label>
+                                <div class="value">${quality.technicianTitle || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>授课班级</label>
+                                <div class="value">${quality.className || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>班级人数</label>
+                                <div class="value">${quality.studentCount || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>计划开设实验个数</label>
+                                <div class="value">${quality.plannedExpCount || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>实际开出个数</label>
+                                <div class="value">${quality.actualExpCount || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item detail-full">
+                                <label>未开出实验项目及原因</label>
+                                <div class="value">${quality.missedExpReason || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>考核方式</label>
+                                <div class="value">${quality.assessmentMethod || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <label>考核人数</label>
+                                <div class="value">${quality.assessmentCount || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item detail-full">
+                                <label>考核时间</label>
+                                <div class="value">${quality.assessmentTime || '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').style.display = 'block';
+                })
+                .catch(err => {
+                    alert('获取登记信息失败：' + err.message);
+                });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function editQuality(id) {
+            fetch(`/api/exp-quality/${id}`)
+                .then(res => res.json())
+                .then(quality => {
+                    openModal(true);
+                    document.getElementById('modalQualityId').value = quality.id;
+                    document.getElementById('modalTaskId').value = quality.taskId || '';
+                    document.getElementById('modalOrganization').value = quality.organization || '';
+                    document.getElementById('modalCourseName').value = quality.courseName || '';
+                    document.getElementById('modalExpHour').value = quality.expHour || '';
+                    document.getElementById('modalIndependentCourse').value = quality.independentCourse != null ? quality.independentCourse.toString() : '';
+                    document.getElementById('modalMainTeacher').value = quality.mainTeacher || '';
+                    document.getElementById('modalTeacherTitle').value = quality.teacherTitle || '';
+                    document.getElementById('modalTechnician').value = quality.technician || '';
+                    document.getElementById('modalTechnicianTitle').value = quality.technicianTitle || '';
+                    document.getElementById('modalClassName').value = quality.className || '';
+                    document.getElementById('modalStudentCount').value = quality.studentCount || '';
+                    document.getElementById('modalPlannedExpCount').value = quality.plannedExpCount || '';
+                    document.getElementById('modalActualExpCount').value = quality.actualExpCount || '';
+                    document.getElementById('modalMissedExpReason').value = quality.missedExpReason || '';
+                    document.getElementById('modalAssessmentMethod').value = quality.assessmentMethod || '';
+                    document.getElementById('modalAssessmentCount').value = quality.assessmentCount || '';
+                    document.getElementById('modalAssessmentTime').value = quality.assessmentTime || '';
+                })
+                .catch(err => {
+                    alert('获取登记信息失败：' + err.message);
+                });
+        }
+
+        function saveQuality() {
+            const id = document.getElementById('modalQualityId').value;
+            const quality = {
+                taskId: document.getElementById('modalTaskId').value ? parseInt(document.getElementById('modalTaskId').value) : null,
+                organization: document.getElementById('modalOrganization').value,
+                courseName: document.getElementById('modalCourseName').value,
+                expHour: document.getElementById('modalExpHour').value ? parseInt(document.getElementById('modalExpHour').value) : null,
+                independentCourse: document.getElementById('modalIndependentCourse').value ? document.getElementById('modalIndependentCourse').value === 'true' : null,
+                mainTeacher: document.getElementById('modalMainTeacher').value,
+                teacherTitle: document.getElementById('modalTeacherTitle').value,
+                technician: document.getElementById('modalTechnician').value,
+                technicianTitle: document.getElementById('modalTechnicianTitle').value,
+                className: document.getElementById('modalClassName').value,
+                studentCount: document.getElementById('modalStudentCount').value ? parseInt(document.getElementById('modalStudentCount').value) : null,
+                plannedExpCount: document.getElementById('modalPlannedExpCount').value ? parseInt(document.getElementById('modalPlannedExpCount').value) : null,
+                actualExpCount: document.getElementById('modalActualExpCount').value ? parseInt(document.getElementById('modalActualExpCount').value) : null,
+                missedExpReason: document.getElementById('modalMissedExpReason').value,
+                assessmentMethod: document.getElementById('modalAssessmentMethod').value,
+                assessmentCount: document.getElementById('modalAssessmentCount').value ? parseInt(document.getElementById('modalAssessmentCount').value) : null,
+                assessmentTime: document.getElementById('modalAssessmentTime').value
+            };
+
+            if (!quality.courseName) {
+                alert('请填写课程名称！');
+                return;
+            }
+
+            const url = id ? `/api/exp-quality/${id}` : '/api/exp-quality';
+            const method = id ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(quality)
+            }).then(() => {
+                alert(id ? '更新成功！' : '新增成功！');
+                window.location.reload();
+            }).catch(err => {
+                alert(id ? '更新失败：' + err.message : '新增失败：' + err.message);
+            });
+        }
+
+        function deleteQuality(id) {
+            if (confirm('确定要删除吗？')) {
+                fetch(`/api/exp-quality/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        alert('删除成功！');
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        alert('删除失败：' + err.message);
+                    });
+            }
+        }
+
+        window.onclick = function (event) {
+            const qualityModal = document.getElementById('qualityModal');
+            const detailModal = document.getElementById('detailModal');
+            if (event.target === qualityModal) {
+                closeModal();
+            }
+            if (event.target === detailModal) {
+                closeDetailModal();
+            }
+        }
+
+        function exportExpQuality() {
+            window.location.href = "/export/exp-quality";
+        }
+    </script>
+</body>
+
+</html>

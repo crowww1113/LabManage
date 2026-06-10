@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学期与校历管理</title>
+    <style>
+        /* 仅作用于当前页面，避免全局污染 */
+        .term-calendar-page *{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑;}
+        .term-calendar-page body{background:#f5f7fa;}
+        .term-calendar-page .container{max-width:1200px;margin:0 auto;padding:20px;}
+        .term-calendar-page h1{color:#2f4050;margin-bottom:30px;}
+        .term-calendar-page .card{background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:20px;}
+        .term-calendar-page h2{color:#1ab394;margin-bottom:20px;}
+        .term-calendar-page .form-group{margin-bottom:15px;}
+        .term-calendar-page label{display:block;margin-bottom:5px;font-weight:bold;}
+        .term-calendar-page input, .term-calendar-page select, .term-calendar-page button{padding:8px 12px;border:1px solid #ddd;border-radius:4px;}
+        .term-calendar-page button{background:#1ab394;color:white;border:none;cursor:pointer;}
+        .term-calendar-page button:hover{background:#17a085;}
+        .term-calendar-page .calendar-container{margin-top:20px;}
+        .term-calendar-page .calendar-header{display:flex;justify-content:space-between;margin-bottom:10px;}
+        .term-calendar-page .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+        .term-calendar-page .calendar-day{border:1px solid #ddd;padding:10px;border-radius:4px;min-height:80px;}
+        .term-calendar-page .calendar-day.weekend{background:#f8f9fa;}
+        .term-calendar-page .calendar-day.today{border-color:#1ab394;background:#e8f4f8;}
+        .term-calendar-page .calendar-day.holiday{background:#f8d7da;color:#721c24;}
+        .term-calendar-page .day-number{font-weight:bold;}
+        .term-calendar-page .day-week{font-size:12px;color:#666;}
+    </style>
+</head>
+<body>
+    <!-- 加唯一父容器，隔离样式 -->
+    <div class="term-calendar-page">
+        <div class="container">
+            <h1>学期与校历管理</h1>
+            
+            <div class="card">
+                <h2>学期设置</h2>
+                <div class="form-group">
+                    <label>选择学期</label>
+                    <select id="termSelect">
+                        <option value="">请选择学期</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>学期名称</label>
+                    <input type="text" id="termName" placeholder="如：2025-2026学年第一学期">
+                </div>
+                <div class="form-group">
+                    <label>开始日期</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-group">
+                    <label>结束日期</label>
+                    <input type="date" id="endDate">
+                </div>
+                <div class="form-group">
+                    <label>节假日</label>
+                    <input type="text" id="holidays" placeholder="如：2025-10-01,2025-10-02">
+                </div>
+                <button onclick="saveTerm()">保存学期</button>
+            </div>
+            
+            <div class="card">
+                <h2>校历视图</h2>
+                <div class="calendar-header">
+                    <button onclick="prevMonth()">&lt; 上个月</button>
+                    <h3 id="currentMonth">2025年9月</h3>
+                    <button onclick="nextMonth()">下个月 &gt;</button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- 日历内容将通过JavaScript动态生成 -->
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>日期详情</h2>
+                <div id="dateDetails">
+                    <p>点击日历上的日期查看详情</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let terms = [];
+        let currentTerm = null;
+
+        // 初始化页面
+        async function init() {
+            await loadTerms();
+            renderCalendar();
+        }
+
+        // 加载学期列表
+        async function loadTerms() {
+            try {
+                const response = await fetch('/api/terms');
+                if (!response.ok) throw new Error('加载学期失败');
+                terms = await response.json();
+                populateTermSelect();
+            } catch (error) {
+                console.error('加载学期失败:', error);
+                alert('加载学期数据失败，请检查网络或后端服务');
+            }
+        }
+
+        // 填充学期选择下拉框
+        function populateTermSelect() {
+            const select = document.getElementById('termSelect');
+            select.innerHTML = '<option value="">请选择学期</option>';
+            terms.forEach(term => {
+                const option = document.createElement('option');
+                option.value = term.id;
+                option.textContent = term.termName;
+                select.appendChild(option);
+            });
+        }
+
+        // 保存学期
+        async function saveTerm() {
+            const termName = document.getElementById('termName').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const holidays = document.getElementById('holidays').value;
+
+            if (!termName || !startDate || !endDate) {
+                alert('请填写完整的学期信息');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/terms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        termName,
+                        startDate,
+                        endDate,
+                        holidayDates: holidays ? holidays.split(',').map(date => date.trim()) : []
+                    })
+                });
+                if (!response.ok) throw new Error('保存学期失败');
+                alert('保存成功');
+                await loadTerms();
+            } catch (error) {
+                console.error('保存学期失败:', error);
+                alert('保存失败，请检查后端服务');
+            }
+        }
+
+        // 渲染日历
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            document.getElementById('currentMonth').textContent = `${year}年${month + 1}月`;
+
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+
+            // 添加星期标题
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            weekdays.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.style.fontWeight = 'bold';
+                dayElement.style.textAlign = 'center';
+                dayElement.textContent = day;
+                calendarGrid.appendChild(dayElement);
+            });
+
+            // 计算当月第一天是星期几
+            const firstDay = new Date(year, month, 1);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+            // 生成42天的日历（6周）
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+
+                // 标记周末
+                const dayOfWeek = date.getDay();
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    dayElement.classList.add('weekend');
+                }
+
+                // 标记今天
+                const today = new Date();
+                if (date.getFullYear() === today.getFullYear() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getDate() === today.getDate()) {
+                    dayElement.classList.add('today');
+                }
+
+                // 标记节假日（补充逻辑）
+                if (currentTerm && currentTerm.holidayDates) {
+                    const dateStr = date.toISOString().split('T')[0];
+                    if (currentTerm.holidayDates.includes(dateStr)) {
+                        dayElement.classList.add('holiday');
+                    }
+                }
+
+                dayElement.innerHTML = `
+                    <div class="day-number">${date.getDate()}</div>
+                    <div class="day-week">周${weekdays[dayOfWeek]}</div>
+                `;
+
+                // 添加点击事件
+                dayElement.addEventListener('click', () => {
+                    showDateDetails(date);
+                });
+
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        // 显示日期详情
+        function showDateDetails(date) {
+            const dateDetails = document.getElementById('dateDetails');
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
+            const dateStr = date.toISOString().split('T')[0];
+
+            let status = isWeekend(date) ? '周末' : '工作日';
+            if (currentTerm && currentTerm.holidayDates && currentTerm.holidayDates.includes(dateStr)) {
+                status = '节假日';
+            }
+
+            dateDetails.innerHTML = `
+                <h3>${year}年${month}月${day}日 星期${dayOfWeek}</h3>
+                <p>状态：${status}</p>
+                <p>学期：${currentTerm ? currentTerm.termName : '未选择学期'}</p>
+            `;
+        }
+
+        // 判断是否是周末
+        function isWeekend(date) {
+            const dayOfWeek = date.getDay();
+            return dayOfWeek === 0 || dayOfWeek === 6;
+        }
+
+        // 上个月
+        function prevMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        // 下个月
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        // 监听学期选择
+        document.getElementById('termSelect').addEventListener('change', function() {
+            const termId = this.value;
+            currentTerm = terms.find(term => term.id == termId);
+            renderCalendar(); // 选择学期后重新渲染日历，标记节假日
+        });
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>

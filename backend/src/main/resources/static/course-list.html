@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>课程管理</title>
+    <link rel="stylesheet" href="/index.html">
+    <style>
+        :root {--bg:#eff2f5;--panel:rgba(255,255,255,0.92);--ink:#181816;--text:#26241f;--muted:#6f6a62;--line:rgba(37,32,27,0.1);--accent:#3f5a52;--radius:20px;--radius-sm:12px;}
+        *{box-sizing:border-box;}body{margin:0;background:linear-gradient(180deg,#f8f6f2 0%,#f1eee8 100%);font-family:Inter,"Segoe UI",Microsoft YaHei,sans-serif;}
+        .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh;}
+        .sidebar{background:var(--panel);border-right:1px solid var(--line);padding:30px 20px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+        .main{padding:40px;}
+        .card{background:var(--panel);border-radius:var(--radius);padding:24px;border:1px solid var(--line);}
+        .btn{padding:10px 16px;border-radius:12px;border:none;background:var(--ink);color:#fff;cursor:pointer;}
+        table{width:100%;border-collapse:collapse;margin-top:20px;}
+        th,td{padding:12px;text-align:left;border-bottom:1px solid var(--line);}
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand" style="padding:20px;border-radius:20px;background:rgba(63,90,82,.06);text-align:center;margin-bottom:30px;">
+            <h1 style="font-size:18px;margin:0 0 6px;">实验室管理系统</h1>
+            <p style="font-size:13px;color:#666;">教学模块</p>
+        </div>
+        <button class="nav-item" onclick="go('/')">总览</button>
+        <button class="nav-item active" onclick="go('/course')">课程管理</button>
+        <button class="nav-item" onclick="go('/term')">学期设置</button>
+        <button class="nav-item" onclick="go('/calendar')">校历</button>
+        <button class="nav-item" onclick="go('/time-slot')">节次</button>
+        <button class="nav-item" onclick="logout()">退出</button>
+    </aside>
+    <main class="main">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;">课程管理</h2>
+            <button class="btn" onclick="go('/course/form')">新增课程</button>
+        </div>
+        <div class="card">
+            <table>
+                <thead>
+                <tr><th>课程名称</th><th>英文名称</th><th>学分</th><th>总学时</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>计算机应用基础</td><td>Computer Basics</td><td>3.0</td><td>48</td><td><button onclick="alert('编辑')">编辑</button></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+<script>function go(u){location.href=u;}function logout(){localStorage.clear();location.href='/login';}</script>
+</body>
+</html>
