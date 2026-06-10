@@ -34,6 +34,28 @@
     <button class="btn-primary login-btn" bindtap="handleLogin">绑定并登录</button>
   </view>
 
+  <!-- 演示账号 -->
+  <view class="card-item demo-card">
+    <view class="demo-header">
+      <text class="demo-title">演示账号</text>
+      <text class="demo-tip">点击可快速填充</text>
+    </view>
+    <view class="demo-list">
+      <view class="demo-item" bindtap="fillDemo" data-username="admin" data-password="admin123">
+        <text class="demo-role">管理员</text>
+        <text class="demo-account">admin / admin123</text>
+      </view>
+      <view class="demo-item" bindtap="fillDemo" data-username="teacher_liu" data-password="teacher123">
+        <text class="demo-role">教师</text>
+        <text class="demo-account">teacher_liu / teacher123</text>
+      </view>
+      <view class="demo-item" bindtap="fillDemo" data-username="stu_chen" data-password="student123">
+        <text class="demo-role">学生</text>
+        <text class="demo-account">stu_chen / student123</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 底部提示 -->
   <view class="login-footer">
     <text class="footer-text">登录即表示您同意相关服务条款</text>

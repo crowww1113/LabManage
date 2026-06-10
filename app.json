@@ -3,6 +3,8 @@
     "pages/index/index",
     "pages/login/login",
     "pages/lab/list",
+    "pages/course/list",
+    "pages/message/list",
     "pages/equipment/list",
     "pages/mine/mine"
   ],
@@ -25,15 +27,21 @@
       },
       {
         "pagePath": "pages/lab/list",
-        "text": "预约",
+        "text": "实验室",
         "iconPath": "images/tab/lab.png",
         "selectedIconPath": "images/tab/lab-active.png"
       },
       {
-        "pagePath": "pages/equipment/list",
-        "text": "设备",
-        "iconPath": "images/tab/equipment.png",
-        "selectedIconPath": "images/tab/equipment-active.png"
+        "pagePath": "pages/course/list",
+        "text": "课程",
+        "iconPath": "images/tab/course.png",
+        "selectedIconPath": "images/tab/course-active.png"
+      },
+      {
+        "pagePath": "pages/message/list",
+        "text": "消息",
+        "iconPath": "images/tab/message.png",
+        "selectedIconPath": "images/tab/message-active.png"
       },
       {
         "pagePath": "pages/mine/mine",

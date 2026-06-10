@@ -6,6 +6,14 @@ Page({
   },
 
   onShow() {
+    // 鉴权检查
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.reLaunch({
+        url: '/pages/login/login'
+      });
+      return;
+    }
     this.loadUserInfo();
   },
 

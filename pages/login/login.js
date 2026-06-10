@@ -15,6 +15,19 @@ Page({
     this.setData({ password: e.detail.value });
   },
 
+  // 快速填充演示账号
+  fillDemo(e) {
+    const { username, password } = e.currentTarget.dataset;
+    this.setData({
+      username: username,
+      password: password
+    });
+    wx.showToast({
+      title: '已填充账号',
+      icon: 'none'
+    });
+  },
+
   // 登录处理
   async handleLogin() {
     const { username, password } = this.data;
