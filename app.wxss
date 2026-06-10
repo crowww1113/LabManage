@@ -1,0 +1,62 @@
+/* 全局样式 */
+page {
+  background-color: #f5f6f8;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.6;
+}
+
+/* 蓝色主按钮 */
+.btn-primary {
+  display: block;
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #007aff;
+  color: #ffffff;
+  font-size: 32rpx;
+  text-align: center;
+  border-radius: 12rpx;
+  border: none;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+/* 白色圆角卡片 */
+.card-item {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 容器 */
+.container {
+  padding: 20rpx;
+}
+
+/* 文本溢出省略 */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Flex 布局工具 */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1;
+}

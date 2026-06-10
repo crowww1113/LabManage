@@ -1,0 +1,41 @@
+<view class="login-container">
+  <!-- 顶部标题区域 -->
+  <view class="login-header">
+    <text class="login-title">实验室预约管理系统</text>
+    <text class="login-subtitle">欢迎使用，请登录您的账号</text>
+  </view>
+
+  <!-- 登录表单卡片 -->
+  <view class="card-item login-card">
+    <!-- 学号/工号输入框 -->
+    <view class="form-group">
+      <text class="form-label">学号/工号</text>
+      <input
+        class="form-input"
+        placeholder="请输入学号或工号"
+        value="{{username}}"
+        bindinput="onUsernameInput"
+      />
+    </view>
+
+    <!-- 密码输入框 -->
+    <view class="form-group">
+      <text class="form-label">密码</text>
+      <input
+        class="form-input"
+        placeholder="请输入密码"
+        password
+        value="{{password}}"
+        bindinput="onPasswordInput"
+      />
+    </view>
+
+    <!-- 登录按钮 -->
+    <button class="btn-primary login-btn" bindtap="handleLogin">绑定并登录</button>
+  </view>
+
+  <!-- 底部提示 -->
+  <view class="login-footer">
+    <text class="footer-text">登录即表示您同意相关服务条款</text>
+  </view>
+</view>

@@ -1,0 +1,46 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/login",
+    "pages/lab/list",
+    "pages/equipment/list",
+    "pages/mine/mine"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#007aff",
+    "navigationBarTitleText": "实验室预约管理系统",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#007aff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tab/home.png",
+        "selectedIconPath": "images/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/lab/list",
+        "text": "预约",
+        "iconPath": "images/tab/lab.png",
+        "selectedIconPath": "images/tab/lab-active.png"
+      },
+      {
+        "pagePath": "pages/equipment/list",
+        "text": "设备",
+        "iconPath": "images/tab/equipment.png",
+        "selectedIconPath": "images/tab/equipment-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "images/tab/mine.png",
+        "selectedIconPath": "images/tab/mine-active.png"
+      }
+    ]
+  }
+}
