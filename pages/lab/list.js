@@ -108,17 +108,18 @@ Page({
   },
 
   async loadRooms() {
-    const { buildings, buildingIndex, terms, termIndex, weekIndex, dayIndex, timeSlotIds } = this.data
+    const { buildings, buildingIndex, terms, termIndex, weekIndex, dayIndex } = this.data
     const buildingId = buildings[buildingIndex]?.id
+    const buildingName = buildings[buildingIndex]?.name
 
-    if (!buildingId || !timeSlotIds || timeSlotIds.length === 0) return
+    if (!buildingId || !buildingName) return
 
     this.setData({ loading: true })
 
     try {
       // 获取学期信息
       let termId = 1
-      let weekNo = weekIndex + 1
+      let weekNo = parseInt(weekIndex, 10) + 1
 
       if (terms && terms.length > 0) {
         termId = terms[termIndex]?.id || 1
@@ -142,58 +143,69 @@ Page({
         }
       }
 
+      // 获取课表矩阵数据（一次请求获取整个楼栋）
+      const queryParams = {
+        termId: termId,
+        weekNo: weekNo,
+        buildingName: buildingName
+      }
+
+      console.log('请求课表矩阵参数:', queryParams)
+
+      const timetableData = await api.getTimetableMatrix(queryParams)
+
+      console.log('课表矩阵返回数据:', timetableData)
+
       // 获取房间列表
       const rooms = await api.getRooms(buildingId)
 
-      // 获取每个房间的空闲状态
-      const labList = await Promise.all(rooms.map(async (room) => {
-        try {
-          const queryParams = {
-            termId: termId,
-            weeks: [weekNo],
-            dayOfWeek: dayIndex + 1,
-            timeSlotIds: timeSlotIds,
-            buildingName: buildings[buildingIndex].name
-          }
+      // 当前选择的星期索引（0-6）
+      const currentDayIndex = parseInt(dayIndex, 10)
 
-          console.log(`房间 ${room.code} 请求参数:`, queryParams)
+      // 从矩阵中提取当天的所有课程数据
+      const dayData = timetableData.matrix?.[currentDayIndex] || []
 
-          const availability = await api.getLabAvailability(queryParams)
+      // 收集当天所有被占用的房间和对应的课程
+      const roomOccupancyMap = {} // roomNumber -> { conflicts: [], available: false }
 
-          console.log(`房间 ${room.code} 的完整数据:`, JSON.stringify(availability, null, 2))
-
-          // 找到当前房间的所有记录
-          const roomRecords = availability.filter(
-            a => a.roomNumber === room.code
-          )
-
-          console.log(`房间 ${room.code} 所有记录:`, roomRecords)
-
-          // 判断是否空闲（没有记录或所有记录都空闲）
-          const isAvailable = roomRecords.length === 0 || roomRecords.every(r => r.available)
-
-          // 收集所有冲突
-          const allConflicts = []
-          roomRecords.forEach(record => {
-            if (record.conflicts && Array.isArray(record.conflicts)) {
-              allConflicts.push(...record.conflicts)
+      dayData.forEach((slotItems, slotIndex) => {
+        if (slotItems && Array.isArray(slotItems)) {
+          slotItems.forEach(item => {
+            const roomNum = item.roomNumber
+            if (roomNum) {
+              if (!roomOccupancyMap[roomNum]) {
+                roomOccupancyMap[roomNum] = { conflicts: [], available: false }
+              }
+              roomOccupancyMap[roomNum].conflicts.push({
+                courseName: item.courseName || '未知课程',
+                teacherName: item.teacherName || '',
+                clazzName: item.clazzName || '',
+                timeSlotName: timetableData.timeSlots?.[slotIndex]?.slotName || '',
+                sourceType: item.sourceType || '',
+                status: item.status || ''
+              })
             }
           })
+        }
+      })
 
+      // 组装每个房间的数据
+      const labList = rooms.map(room => {
+        const occupancy = roomOccupancyMap[room.code]
+        if (occupancy) {
           return {
             ...room,
-            isAvailable: isAvailable,  // 直接使用，不要取反
-            conflicts: allConflicts
+            isAvailable: false,
+            conflicts: occupancy.conflicts
           }
-        } catch (err) {
-          console.error(`房间 ${room.code} 查询失败:`, err)
+        } else {
           return {
             ...room,
             isAvailable: true,
             conflicts: []
           }
         }
-      }))
+      })
 
       this.setData({ labList, loading: false })
       this.filterList()
@@ -218,13 +230,13 @@ Page({
 
   // 周次切换
   onWeekChange(e) {
-    this.setData({ weekIndex: e.detail.value })
+    this.setData({ weekIndex: parseInt(e.detail.value, 10) })
     this.loadRooms()
   },
 
   // 星期切换
   onDayChange(e) {
-    this.setData({ dayIndex: e.detail.value })
+    this.setData({ dayIndex: parseInt(e.detail.value, 10) })
     this.loadRooms()
   },
 

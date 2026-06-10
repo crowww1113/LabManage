@@ -97,6 +97,16 @@ const getLabAvailability = (params) => {
 }
 
 /**
+ * 获取课表矩阵数据（按天+节次组织）
+ */
+const getTimetableMatrix = (params) => {
+  return request({
+    url: '/api/timetable/matrix',
+    data: params
+  })
+}
+
+/**
  * 获取学期列表
  */
 const getTerms = () => {
@@ -115,6 +125,7 @@ module.exports = {
   getBuildings,
   getRooms,
   getLabAvailability,
+  getTimetableMatrix,
   getTerms,
   getTimeSlots
 }

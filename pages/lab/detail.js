@@ -107,40 +107,51 @@ Page({
   },
 
   async loadAvailability() {
-    const { currentWeek, currentDay, labInfo, timeSlotIds, buildingName, terms, termIndex } = this.data
+    const { currentWeek, currentDay, labInfo, buildingName, terms, termIndex } = this.data
 
-    // 如果没有时间段ID或学期，不请求
-    if (!timeSlotIds || timeSlotIds.length === 0 || !terms || terms.length === 0) {
-      console.warn('时间段ID或学期为空，跳过查询')
+    // 如果没有学期，不请求
+    if (!terms || terms.length === 0) {
+      console.warn('学期为空，跳过查询')
       return
     }
 
     const termId = terms[termIndex]?.id
+    const dayIndex = currentDay - 1 // 转换为0-6索引
 
     try {
-      const availability = await api.getLabAvailability({
+      // 使用新的课表矩阵接口
+      const timetableData = await api.getTimetableMatrix({
         termId: termId,
-        weeks: [currentWeek],
-        dayOfWeek: currentDay,
-        timeSlotIds: timeSlotIds,
+        weekNo: currentWeek,
         buildingName: buildingName
       })
 
-      // 找到当前房间的所有记录
-      const roomRecords = availability.filter(
-        a => a.roomNumber === labInfo?.code
-      )
+      console.log('详情页课表数据:', timetableData)
 
-      // 收集所有冲突
-      const allConflicts = []
-      roomRecords.forEach(record => {
-        if (record.conflicts && Array.isArray(record.conflicts)) {
-          allConflicts.push(...record.conflicts)
+      // 从矩阵中提取当前房间当天的所有课程
+      const dayData = timetableData.matrix?.[dayIndex] || []
+      const roomConflicts = []
+
+      dayData.forEach((slotItems, slotIndex) => {
+        if (slotItems && Array.isArray(slotItems)) {
+          slotItems.forEach(item => {
+            // 只保留当前房间的课程
+            if (item.roomNumber === labInfo?.code) {
+              roomConflicts.push({
+                courseName: item.courseName || '未知课程',
+                teacherName: item.teacherName || '',
+                clazzName: item.clazzName || '',
+                timeSlotName: timetableData.timeSlots?.[slotIndex]?.slotName || '',
+                sourceType: item.sourceType || '',
+                status: item.status || ''
+              })
+            }
+          })
         }
       })
 
       this.setData({
-        availability: allConflicts
+        availability: roomConflicts
       })
     } catch (err) {
       console.error('加载空闲状态失败:', err)
@@ -148,7 +159,7 @@ Page({
   },
 
   onWeekChange(e) {
-    this.setData({ currentWeek: e.detail.value + 1 })
+    this.setData({ currentWeek: parseInt(e.detail.value, 10) + 1 })
     this.loadAvailability()
   },
 
