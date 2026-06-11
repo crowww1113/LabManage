@@ -1,4 +1,5 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "实验室预约"
+  "navigationBarTitleText": "实验室",
+  "enablePullDownRefresh": true
 }

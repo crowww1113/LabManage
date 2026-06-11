@@ -120,6 +120,24 @@ const getTimeSlots = () => {
   return request({ url: '/api/time-slots' })
 }
 
+/**
+ * 获取班级列表
+ */
+const getClazzes = () => {
+  return request({ url: '/api/clazzes' })
+}
+
+/**
+ * 创建预约
+ */
+const createReservation = (data) => {
+  return request({
+    url: '/api/schedule-reservations',
+    method: 'POST',
+    data
+  })
+}
+
 module.exports = {
   request,
   getBuildings,
@@ -127,5 +145,7 @@ module.exports = {
   getLabAvailability,
   getTimetableMatrix,
   getTerms,
-  getTimeSlots
+  getTimeSlots,
+  getClazzes,
+  createReservation
 }

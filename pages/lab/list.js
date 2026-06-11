@@ -2,6 +2,8 @@ const api = require('../../utils/api')
 
 Page({
   data: {
+    // 角色
+    isStudent: false,
     // 楼栋相关
     buildings: [],
     buildingIndex: 0,
@@ -31,6 +33,14 @@ Page({
   },
 
   onShow() {
+    // 同步自定义tabBar选中态
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setSelected(1)
+    }
+    // 角色检查
+    const userInfo = wx.getStorageSync('userInfo')
+    const isStudent = userInfo && userInfo.roleCode === 'STUDENT'
+    this.setData({ isStudent })
     // 从全局获取学期信息
     const app = getApp()
     if (app.globalData.terms && app.globalData.terms.length > 0) {

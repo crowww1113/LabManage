@@ -65,6 +65,7 @@ Page({
       // 登录成功，存储 token 和用户信息
       wx.setStorageSync('token', data.token);
       wx.setStorageSync('userInfo', {
+        userId: data.userId,
         username: data.username,
         realName: data.realName,
         roles: data.roles,

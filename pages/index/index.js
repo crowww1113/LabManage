@@ -11,6 +11,10 @@ Page({
   },
 
   onShow() {
+    // 同步自定义tabBar选中态
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setSelected(0)
+    }
     // 鉴权检查
     const token = wx.getStorageSync('token');
     if (!token) {

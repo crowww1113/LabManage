@@ -1,67 +1,73 @@
-<!-- 顶部欢迎区 -->
-<view class="header">
-  <view class="header-content">
-    <text class="greeting">你好，{{realName || username}} {{roleName}}</text>
-    <text class="welcome">欢迎使用实验室管理系统</text>
+<!-- 欢迎卡片 -->
+<view class="hero-card">
+  <view class="hero-row">
+    <view class="hero-avatar">👤</view>
+    <view class="hero-info">
+      <text class="hero-name">{{realName || username}}</text>
+      <text class="hero-role">{{roleName}}</text>
+    </view>
   </view>
-</view>
-
-<!-- 学期选择 -->
-<view class="card-item term-card">
-  <view class="term-header">
-    <text class="term-label">当前学期</text>
-    <picker wx:if="{{terms.length > 0}}" mode="selector" range="{{terms}}" range-key="termName" value="{{termIndex}}" bindchange="onTermChange">
-      <view class="term-picker">
-        <text class="term-text">{{terms[termIndex].termName}}</text>
-        <text class="term-arrow">▼</text>
+  <view class="hero-term" wx:if="{{terms.length > 0}}">
+    <picker mode="selector" range="{{terms}}" range-key="termName" value="{{termIndex}}" bindchange="onTermChange">
+      <view class="hero-term-row">
+        <text class="hero-term-label">📅</text>
+        <text class="hero-term-text">{{terms[termIndex].termName}}</text>
+        <text class="hero-term-arrow">›</text>
       </view>
     </picker>
-    <text wx:else class="term-text">加载中...</text>
   </view>
 </view>
 
-<!-- 核心金刚区 -->
-<view class="card-item grid-card">
-  <view class="grid-container">
-    <view class="grid-item" bindtap="onTapGrid" data-type="lab">
-      <view class="grid-icon">🔬</view>
-      <text class="grid-text">实验室预约</text>
-    </view>
-    <view class="grid-item" bindtap="onTapGrid" data-type="equipment">
-      <view class="grid-icon">🔧</view>
-      <text class="grid-text">设备借用</text>
-    </view>
-    <view class="grid-item" bindtap="onTapGrid" data-type="course">
-      <view class="grid-icon">📚</view>
-      <text class="grid-text">我的课程</text>
-    </view>
-    <view class="grid-item" bindtap="onTapGrid" data-type="message">
-      <view class="grid-icon">📢</view>
-      <text class="grid-text">消息通知</text>
-    </view>
+<!-- 快捷功能 - 2×2 网格 -->
+<view class="grid-section">
+  <view class="grid-card" bindtap="onTapGrid" data-type="lab">
+    <text class="grid-icon">🔬</text>
+    <text class="grid-label">实验室预约</text>
+  </view>
+  <view class="grid-card" bindtap="onTapGrid" data-type="equipment">
+    <text class="grid-icon">🔧</text>
+    <text class="grid-label">设备借用</text>
+  </view>
+  <view class="grid-card" bindtap="onTapGrid" data-type="course">
+    <text class="grid-icon">📚</text>
+    <text class="grid-label">我的课程</text>
+  </view>
+  <view class="grid-card" bindtap="onTapGrid" data-type="message">
+    <text class="grid-icon">📢</text>
+    <text class="grid-label">消息通知</text>
   </view>
 </view>
 
-<!-- 近期公告区 -->
-<view class="card-item notice-card">
+<!-- 近期公告 -->
+<view class="notice-section">
   <view class="notice-header">
-    <text class="notice-title">近期系统公告</text>
+    <text class="notice-title">近期公告</text>
+    <text class="notice-more">查看全部 ›</text>
   </view>
-  <view class="notice-list">
+  <view class="notice-card">
     <view class="notice-item">
       <view class="notice-dot"></view>
-      <text class="notice-content">关于实验室安全检查的通知</text>
-      <text class="notice-time">06-10</text>
+      <view class="notice-body">
+        <text class="notice-text">关于实验室安全检查的通知</text>
+        <text class="notice-date">06-10</text>
+      </view>
     </view>
     <view class="notice-item">
       <view class="notice-dot"></view>
-      <text class="notice-content">2026年暑假实验室开放时间安排</text>
-      <text class="notice-time">06-08</text>
+      <view class="notice-body">
+        <text class="notice-text">2026年暑假实验室开放时间安排</text>
+        <text class="notice-date">06-08</text>
+      </view>
     </view>
     <view class="notice-item">
       <view class="notice-dot"></view>
-      <text class="notice-content">新增实验室设备预约功能上线</text>
-      <text class="notice-time">06-05</text>
+      <view class="notice-body">
+        <text class="notice-text">新增实验室设备预约功能上线</text>
+        <text class="notice-date">06-05</text>
+      </view>
     </view>
   </view>
 </view>
+
+<!-- 底部安全距离 -->
+<view style="height: 160rpx"></view>

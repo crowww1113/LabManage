@@ -1,54 +1,47 @@
 <view class="login-container">
-  <!-- 顶部标题区域 -->
+  <!-- 标题区 -->
   <view class="login-header">
-    <text class="login-title">实验室预约管理系统</text>
-    <text class="login-subtitle">欢迎使用，请登录您的账号</text>
+    <text class="login-title">实验室预约</text>
+    <text class="login-subtitle">登录您的账号</text>
   </view>
 
-  <!-- 登录表单卡片 -->
-  <view class="card-item login-card">
-    <!-- 学号/工号输入框 -->
-    <view class="form-group">
-      <text class="form-label">学号/工号</text>
+  <!-- 表单 -->
+  <view class="login-form">
+    <view class="input-group">
       <input
         class="form-input"
-        placeholder="请输入学号或工号"
+        placeholder="学号 / 工号"
         value="{{username}}"
         bindinput="onUsernameInput"
       />
     </view>
-
-    <!-- 密码输入框 -->
-    <view class="form-group">
-      <text class="form-label">密码</text>
+    <view class="input-group">
       <input
         class="form-input"
-        placeholder="请输入密码"
+        placeholder="密码"
         password
         value="{{password}}"
         bindinput="onPasswordInput"
       />
     </view>
 
-    <!-- 登录按钮 -->
-    <button class="btn-primary login-btn" bindtap="handleLogin">绑定并登录</button>
+    <button class="btn-primary login-btn" bindtap="handleLogin">登录</button>
   </view>
 
   <!-- 演示账号 -->
-  <view class="card-item demo-card">
-    <view class="demo-header">
-      <text class="demo-title">演示账号</text>
-      <text class="demo-tip">点击可快速填充</text>
-    </view>
+  <view class="demo-section">
+    <text class="demo-hint">演示账号（点击填充）</text>
     <view class="demo-list">
       <view class="demo-item" bindtap="fillDemo" data-username="admin" data-password="admin123">
         <text class="demo-role">管理员</text>
         <text class="demo-account">admin / admin123</text>
       </view>
+      <view class="demo-divider"></view>
       <view class="demo-item" bindtap="fillDemo" data-username="teacher_liu" data-password="teacher123">
         <text class="demo-role">教师</text>
         <text class="demo-account">teacher_liu / teacher123</text>
       </view>
+      <view class="demo-divider"></view>
       <view class="demo-item" bindtap="fillDemo" data-username="stu_chen" data-password="student123">
         <text class="demo-role">学生</text>
         <text class="demo-account">stu_chen / student123</text>
@@ -56,7 +49,7 @@
     </view>
   </view>
 
-  <!-- 底部提示 -->
+  <!-- 底部 -->
   <view class="login-footer">
     <text class="footer-text">登录即表示您同意相关服务条款</text>
   </view>

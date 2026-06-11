@@ -1,1 +1,5 @@
-<view class="placeholder">页面开发中...</view>
+<view class="page-empty">
+  <text class="page-empty-icon">💬</text>
+  <text class="page-empty-title">消息</text>
+  <text class="page-empty-desc">即将上线</text>
+</view>

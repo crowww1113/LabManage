@@ -1,93 +1,172 @@
 <!-- pages/lab/detail.wxml -->
-<view class="container">
+<view class="detail-page">
   <!-- 加载中 -->
   <view wx:if="{{loading}}" class="loading">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
   </view>
 
   <view wx:elif="{{labInfo}}" class="detail-content">
-    <!-- 实验室信息卡片 -->
-    <view class="info-card">
-      <view class="card-header">
-        <view class="lab-title-wrap">
-          <text class="lab-title">{{labInfo.code}}</text>
-          <text class="lab-type-tag">{{labInfo.roomType}}</text>
+    <!-- 实验室信息 -->
+    <view class="section">
+      <view class="info-card">
+        <view class="info-top">
+          <view class="info-title-row">
+            <text class="info-title">{{labInfo.code}}</text>
+            <text class="info-tag">{{labInfo.roomType}}</text>
+          </view>
+          <view class="book-btn" bindtap="onBookingTap">预约</view>
         </view>
-        <view class="book-btn" bindtap="onBookingTap">预约</view>
-      </view>
 
-      <view class="info-grid">
-        <view class="info-cell">
-          <text class="info-value">{{labInfo.seats}}</text>
-          <text class="info-label">容纳人数</text>
+        <view class="info-stats">
+          <view class="stat-item">
+            <text class="stat-value">{{labInfo.seats}}</text>
+            <text class="stat-label">容纳人数</text>
+          </view>
+          <view class="stat-divider"></view>
+          <view class="stat-item">
+            <text class="stat-value">{{labInfo.floor || '-'}}</text>
+            <text class="stat-label">楼层</text>
+          </view>
+          <view class="stat-divider"></view>
+          <view class="stat-item">
+            <text class="stat-value">{{labInfo.area || '-'}}</text>
+            <text class="stat-label">面积</text>
+          </view>
         </view>
-        <view class="info-cell">
-          <text class="info-value">{{labInfo.floor || '-'}}</text>
-          <text class="info-label">楼层</text>
-        </view>
-        <view class="info-cell">
-          <text class="info-value">{{labInfo.area || '-'}}</text>
-          <text class="info-label">面积</text>
-        </view>
-      </view>
 
-      <view wx:if="{{labInfo.intro}}" class="intro-section">
-        <text class="intro-label">简介</text>
-        <text class="intro-text">{{labInfo.intro}}</text>
+        <view wx:if="{{labInfo.intro}}" class="intro-row">
+          <text class="intro-text">{{labInfo.intro}}</text>
+        </view>
       </view>
     </view>
 
-    <!-- 周次选择 -->
-    <view class="week-selector">
+    <!-- 课表查询 -->
+    <view class="section">
       <text class="section-title">课表查询</text>
-      <view class="selector-row">
-        <!-- 学期选择 -->
-        <picker wx:if="{{terms.length > 0}}" mode="selector" range="{{terms}}" range-key="termName" value="{{termIndex}}" bindchange="onTermChange">
-          <view class="picker-content">
-            <text class="picker-text">{{terms[termIndex].termName}}</text>
-            <text class="picker-arrow">▼</text>
-          </view>
-        </picker>
-        <!-- 周次选择 -->
-        <picker mode="selector" range="{{weeks}}" value="{{currentWeek - 1}}" bindchange="onWeekChange">
-          <view class="picker-content">
-            <text class="picker-text">第 {{currentWeek}} 周</text>
-            <text class="picker-arrow">▼</text>
-          </view>
-        </picker>
+      <view class="card-item">
+        <view class="picker-row">
+          <picker wx:if="{{terms.length > 0}}" mode="selector" range="{{terms}}" range-key="termName" value="{{termIndex}}" bindchange="onTermChange">
+            <view class="detail-picker">
+              <text class="detail-picker-text">{{terms[termIndex].termName}}</text>
+              <text class="detail-chevron">‹</text>
+            </view>
+          </picker>
+          <view class="picker-sep"></view>
+          <picker mode="selector" range="{{weeks}}" value="{{currentWeek - 1}}" bindchange="onWeekChange">
+            <view class="detail-picker">
+              <text class="detail-picker-text">第 {{currentWeek}} 周</text>
+              <text class="detail-chevron">‹</text>
+            </view>
+          </picker>
+        </view>
       </view>
     </view>
 
     <!-- 星期选择 -->
-    <view class="day-tabs">
+    <view class="day-bar">
       <view
         wx:for="{{days}}"
         wx:key="index"
-        class="day-tab {{currentDay === index + 1 ? 'active' : ''}}"
+        class="day-item {{currentDay === index + 1 ? 'active' : ''}}"
         data-day="{{index + 1}}"
         bindtap="onDayTap"
-      >
-        {{item}}
-      </view>
+      >{{item}}</view>
     </view>
 
     <!-- 预约情况 -->
-    <view class="availability-section">
-      <view wx:if="{{availability.length > 0}}" class="conflict-list">
-        <view wx:for="{{availability}}" wx:key="timeSlotName" class="conflict-item">
-          <view class="conflict-time">{{item.timeSlotName}}</view>
-          <view class="conflict-info">
-            <text class="conflict-course">{{item.courseName}}</text>
-            <text class="conflict-teacher">{{item.teacherName}}</text>
-            <text class="conflict-clazz">{{item.clazzName}}</text>
+    <view class="section">
+      <view wx:if="{{availability.length > 0}}" class="card-item">
+        <view wx:for="{{availability}}" wx:key="timeSlotName" class="slot-item">
+          <view class="slot-left">
+            <text class="slot-time">{{item.timeSlotName}}</text>
+          </view>
+          <view class="slot-right">
+            <text class="slot-course">{{item.courseName}}</text>
+            <text class="slot-detail">{{item.teacherName}} · {{item.clazzName}}</text>
           </view>
         </view>
       </view>
 
       <view wx:else class="empty-slot">
-        <image class="empty-icon" src="/images/empty.png" mode="aspectFit"></image>
         <text class="empty-text">当前时段暂无预约</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 预约弹窗 -->
+  <view wx:if="{{showBooking}}" class="booking-mask" bindtap="onBookingClose" catchtouchmove="preventScroll">
+    <view class="booking-sheet" catchtap="preventScroll">
+      <!-- 弹窗头部 -->
+      <view class="booking-header">
+        <text class="booking-title">预约 {{labInfo.code}}</text>
+        <text class="booking-close" bindtap="onBookingClose">✕</text>
+      </view>
+
+      <!-- 表单 -->
+      <view class="booking-form">
+        <!-- 使用日期 -->
+        <view class="booking-field">
+          <text class="booking-label">使用日期</text>
+          <picker mode="date" value="{{bookingDate}}" start="{{bookingDate}}" bindchange="onBookingDateChange">
+            <view class="booking-picker">
+              <text class="booking-picker-text">{{bookingDate || '请选择'}}</text>
+              <text class="booking-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 使用时间段 -->
+        <view class="booking-field">
+          <text class="booking-label">使用时间段</text>
+          <picker mode="selector" range="{{bookingTimeSlots}}" range-key="slotName" value="{{bookingTimeSlotIndex}}" bindchange="onBookingTimeSlotChange">
+            <view class="booking-picker">
+              <text class="booking-picker-text">{{bookingTimeSlots[bookingTimeSlotIndex].slotName || '请选择'}}</text>
+              <text class="booking-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 使用班级 -->
+        <view class="booking-field">
+          <text class="booking-label">使用班级</text>
+          <picker mode="selector" range="{{bookingClazzes}}" range-key="clazzName" value="{{bookingClazzIndex}}" bindchange="onBookingClazzChange">
+            <view class="booking-picker">
+              <text class="booking-picker-text">{{bookingClazzes[bookingClazzIndex].clazzName || '请选择班级'}}</text>
+              <text class="booking-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 使用人数 -->
+        <view class="booking-field">
+          <text class="booking-label">使用人数</text>
+          <input
+            class="booking-input"
+            type="number"
+            placeholder="请输入人数"
+            value="{{bookingPeople}}"
+            bindinput="onBookingPeopleInput"
+          />
+        </view>
+
+        <!-- 使用目的 -->
+        <view class="booking-field">
+          <text class="booking-label">使用目的</text>
+          <textarea
+            class="booking-textarea"
+            placeholder="请简要描述使用目的"
+            value="{{bookingPurpose}}"
+            bindinput="onBookingPurposeInput"
+            maxlength="200"
+          />
+        </view>
+      </view>
+
+      <!-- 提交按钮 -->
+      <view class="booking-footer">
+        <button class="booking-submit {{bookingSubmitting ? 'disabled' : ''}}" bindtap="onBookingSubmit">
+          {{bookingSubmitting ? '提交中...' : '提交预约'}}
+        </button>
       </view>
     </view>
   </view>
